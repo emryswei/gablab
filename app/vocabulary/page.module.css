@@ -1,0 +1,49 @@
+.wordCardBase {
+  will-change: transform, opacity;
+}
+
+.wordCardEnterFromRight {
+  animation: wordEnterFromRight 240ms ease-in-out;
+}
+
+.wordCardExitToLeft {
+  animation: wordExitToLeft 240ms ease-in-out forwards;
+}
+
+.navButton {
+  transition:
+    transform 180ms ease-in-out,
+    filter 180ms ease-in-out,
+    background-color 180ms ease-in-out;
+}
+
+.navButton:hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.navButton:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+@keyframes wordEnterFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes wordExitToLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
