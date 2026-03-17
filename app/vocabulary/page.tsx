@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
 import { getAdjacentWords, getRandomWord, getWord, type WordRow } from "@/lib/mysql";
 import WordViewer from "./word-viewer";
 
@@ -39,9 +40,11 @@ export default async function VocabularyPage({ searchParams }: VocabularyPagePro
 
   return (
     <main style={{ maxWidth: 900, margin: "40px auto", padding: "0 16px", fontFamily: "sans-serif" }}>
-      <p style={{ marginTop: 0 }}>
-        <Link href="/">Back</Link>
-      </p>
+      <div style={{ marginTop: 0 }}>
+        <Button asChild variant="outline">
+          <Link href="/">Back</Link>
+        </Button>
+      </div>
 
       {error ? (
         <section
