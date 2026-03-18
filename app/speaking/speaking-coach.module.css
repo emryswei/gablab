@@ -1,0 +1,11 @@
+.spectrogramFrame {
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.spectrogramCanvas {
+  display: block;
+  width: 100%;
+  height: 110px;
+  border-radius: 8px;
+}
