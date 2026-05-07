@@ -9,3 +9,37 @@
   height: 110px;
   border-radius: 8px;
 }
+
+.accentSelector {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 48px);
+  gap: 4px;
+  margin-top: 12px;
+  padding: 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.accentButton,
+.accentButtonActive {
+  min-width: 48px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  background: transparent;
+  cursor: pointer;
+}
+
+.accentButton:hover {
+  background: #eef2ff;
+}
+
+.accentButtonActive {
+  color: #ffffff;
+  background: #1f2937;
+}

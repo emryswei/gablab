@@ -6,6 +6,10 @@
     "dev": "next dev -p 9528",
     "build": "next build",
     "start": "next start",
+    "test": "node --experimental-strip-types --test tests/**/*.test.mjs tests/**/*.test.mts",
+    "failure-model": "node scripts/failure-model.mjs",
+    "quality": "npm run failure-model && npm test && npm run lint && npm run typecheck",
+    "ralph": "node scripts/ralph-loop.mjs .agents/ralph/gablab-quality-loop",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
   },

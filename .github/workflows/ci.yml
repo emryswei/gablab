@@ -36,6 +36,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Test
+        run: npm test
+
+      - name: Failure model
+        run: npm run failure-model
+
       - name: Lint
         run: npm run lint
 

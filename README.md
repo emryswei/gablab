@@ -1,4 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+GabLab is a [Next.js](https://nextjs.org) App Router project for speaking and vocabulary practice.
+
+## File Structure
+
+```text
+app/                         Next.js routes, pages, and API route handlers
+components/                  Shared UI components
+lib/                         Shared backend/data access helpers
+scripts/                     Local quality and Ralph loop tooling
+tests/                       Node test runner tests for project tooling
+.agents/ralph/               Ralph loop packages, failure models, and run records
+public/                      Static assets and seed word files
+```
+
+## Ralph Loop Quality Flow
+
+Core idea: a Ralph loop is a repeatable engineering loop that uses deterministic feedback instead of only trusting a single model response or a narrow unit test.
+
+Fundamental facts:
+- Frontend code is under `app/` and browser interactivity must stay in Client Components.
+- Backend API routes are under `app/api/` and must validate request input.
+- Database access is isolated behind `lib/mysql.ts`.
+- Quality is not only unit tests; lint, TypeScript, and failure-model coverage are separate signals.
+
+Step-by-step flow:
+1. Write or update a failing test for the smallest behavior.
+2. Implement the smallest production change.
+3. Run `npm run quality`.
+4. If any gate fails, treat the iteration as failed and fix the first concrete signal.
+5. Run `npm run ralph` to execute the project Ralph loop and save a run record under `.agents/ralph/runs/`.
+
+Useful commands:
+
+```bash
+npm test
+npm run failure-model
+npm run quality
+npm run ralph
+```
+
+Analogy: unit tests are like checking a door key. The failure model is like checking the door frame, lock, alarm, and escape route too. A key can turn and still not mean the building is safe.
 
 ## Getting Started
 
@@ -6,15 +46,9 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:9528](http://localhost:9528) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

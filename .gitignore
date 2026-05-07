@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/.agents/ralph/runs/*.json
+!/.agents/ralph/runs/.gitkeep
 
 # next.js
 /.next/
