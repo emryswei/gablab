@@ -73,7 +73,6 @@ export default function SpeakingCoach() {
   const selectedAccentRef = useRef<EnglishAccent>("en-GB");
 
   const [isSupported, setIsSupported] = useState(false);
-  const [isConversationActive, setIsConversationActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -365,7 +364,6 @@ export default function SpeakingCoach() {
     setCoachReply(null);
     setHistory([]);
     historyRef.current = [];
-    setIsConversationActive(true);
     conversationActiveRef.current = true;
     stopRecognition();
 
@@ -377,7 +375,6 @@ export default function SpeakingCoach() {
   };
 
   const endConversation = (message?: string) => {
-    setIsConversationActive(false);
     conversationActiveRef.current = false;
     stopRecognition();
     stopAssistantSpeech();
@@ -431,21 +428,8 @@ export default function SpeakingCoach() {
         onAccentChange={setSelectedAccent}
       />
 
-      <p style={{ marginTop: 12, color: "#4b5563" }}>
-        Status:{" "}
-        {isAssistantSpeaking
-          ? "Assistant speaking"
-          : isLoading
-            ? "Thinking"
-            : isListening
-              ? "Listening"
-              : isConversationActive
-                ? "Waiting"
-                : "Conversation ended"}
-      </p>
-
       <div className={styles.spectrogramFrame} aria-hidden="true">
-        <canvas ref={visualizerCanvasRef} className={styles.spectrogramCanvas} width={620} height={140} />
+        <canvas ref={visualizerCanvasRef} className={styles.spectrogramCanvas} width={360} height={360} />
       </div>
 
       {coachReply ? (

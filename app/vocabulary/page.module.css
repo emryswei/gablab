@@ -1,16 +1,138 @@
+.wordDeck {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.6fr) minmax(220px, 1.4fr) minmax(96px, 0.6fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 220px;
+  perspective: 900px;
+}
+
 .wordCardBase {
+  position: relative;
+  z-index: 2;
+  min-height: 190px;
+  padding: 28px 24px;
+  text-align: center;
+  border: 1px solid rgba(31, 41, 55, 0.16);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(96, 165, 250, 0.2), transparent 28%),
+    linear-gradient(145deg, #ffffff 0%, #f8fafc 62%, #eef7ff 100%);
+  box-shadow: 0 22px 56px rgba(15, 23, 42, 0.16), 0 3px 0 rgba(255, 255, 255, 0.8) inset;
+  transform-style: preserve-3d;
   will-change: transform, opacity;
 }
 
 .wordCardEnterFromRight {
-  animation: wordEnterFromRight 240ms ease-in-out;
+  animation: wordEnterFromRight 240ms cubic-bezier(0.18, 0.84, 0.24, 1);
+}
+
+.wordCardEnterFromLeft {
+  animation: wordEnterFromLeft 240ms cubic-bezier(0.18, 0.84, 0.24, 1);
 }
 
 .wordCardExitToLeft {
-  animation: wordExitToLeft 240ms ease-in-out forwards;
+  animation: wordExitToLeft 240ms cubic-bezier(0.64, 0, 0.78, 0) forwards;
+}
+
+.wordCardExitToRight {
+  animation: wordExitToRight 240ms cubic-bezier(0.64, 0, 0.78, 0) forwards;
+}
+
+.wordText {
+  overflow-wrap: anywhere;
+  font-size: clamp(38px, 8vw, 64px);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #111827;
+  letter-spacing: 0;
+}
+
+.translationText {
+  min-height: 28px;
+  margin-top: 14px;
+  color: #4b5563;
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.sideWordCard {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-height: 138px;
+  padding: 14px 12px;
+  border: 1px solid rgba(31, 41, 55, 0.12);
+  border-radius: 8px;
+  color: #374151;
+  background: #f8fafc;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  opacity: 0.76;
+  transition:
+    transform 180ms ease-in-out,
+    opacity 180ms ease-in-out,
+    box-shadow 180ms ease-in-out;
+}
+
+.sideWordCardPrevious {
+  transform: rotateY(14deg) translateX(8px) scale(0.94);
+}
+
+.sideWordCardNext {
+  transform: rotateY(-14deg) translateX(-8px) scale(0.94);
+}
+
+.sideWordCard:hover:not(:disabled) {
+  opacity: 1;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
+.sideWordCardPrevious:hover:not(:disabled) {
+  transform: rotateY(8deg) translateX(2px) scale(0.97);
+}
+
+.sideWordCardNext:hover:not(:disabled) {
+  transform: rotateY(-8deg) translateX(-2px) scale(0.97);
+}
+
+.sideWordCard:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.sideCardLabel {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.sideCardWord {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.navRow {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .navButton {
+  min-width: 92px;
+  padding: 12px 22px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
   transition:
     transform 180ms ease-in-out,
     filter 180ms ease-in-out,
@@ -26,24 +148,106 @@
   transform: translateY(1px) scale(0.98);
 }
 
+.navButton:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.navButtonPrevious {
+  background: #e5efff;
+}
+
+.navButtonNext {
+  background: #eaf8eb;
+}
+
+.navButtonDisabled {
+  min-width: 92px;
+  padding: 12px 22px;
+  border: 1px solid #c5c7cb;
+  border-radius: 8px;
+  color: #9ca3af;
+  font-weight: 700;
+  text-align: center;
+  background: #f3f4f6;
+}
+
+.clientError {
+  margin-top: 12px;
+  text-align: center;
+  color: #b42318;
+  font-weight: 700;
+}
+
 @keyframes wordEnterFromRight {
   from {
     opacity: 0;
-    transform: translateX(24px);
+    transform: translateX(96px) rotateY(-18deg) scale(0.92);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes wordEnterFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-96px) rotateY(18deg) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg) scale(1);
   }
 }
 
 @keyframes wordExitToLeft {
   from {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) rotateY(0deg) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateX(-24px);
+    transform: translateX(-96px) rotateY(18deg) scale(0.92);
+  }
+}
+
+@keyframes wordExitToRight {
+  from {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(96px) rotateY(-18deg) scale(0.92);
+  }
+}
+
+@media (max-width: 640px) {
+  .wordDeck {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .sideWordCard {
+    display: none;
+  }
+
+  .wordCardBase {
+    min-height: 172px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordCardEnterFromRight,
+  .wordCardEnterFromLeft,
+  .wordCardExitToLeft,
+  .wordCardExitToRight {
+    animation-duration: 1ms;
+  }
+
+  .navButton,
+  .sideWordCard {
+    transition-duration: 1ms;
   }
 }

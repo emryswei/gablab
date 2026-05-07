@@ -69,20 +69,22 @@ export function useMicVisualizer({
 
     const width = canvas.width;
     const height = canvas.height;
-    const bars = 78;
-    const barGap = 3;
-    const barWidth = Math.max(1, (width - (bars - 1) * barGap) / bars);
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const baseRadius = Math.min(width, height) * 0.27;
+    const bars = 96;
     const freqData = new Uint8Array(2048);
 
     const render = () => {
       const analyser = analyserRef.current;
       const listening = isListeningRef.current;
       const assistantSpeaking = isAssistantSpeakingRef.current;
+      const now = performance.now();
 
       if (analyser && listening) {
         analyser.getByteFrequencyData(freqData);
       } else {
-        const elapsed = Math.max(0, performance.now() - aiSpeakingStartedAtRef.current);
+        const elapsed = Math.max(0, now - aiSpeakingStartedAtRef.current);
         const seed = aiSpeakingSeedRef.current;
         const sampleRate = audioContextRef.current?.sampleRate ?? 48000;
         const nyquist = sampleRate / 2;
@@ -129,24 +131,83 @@ export function useMicVisualizer({
       }
 
       ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.translate(centerX, centerY);
 
+      let averageEnergy = 0;
       for (let i = 0; i < bars; i += 1) {
-        const bin = Math.floor((i / bars) * Math.min(freqData.length, 1024));
-        const v = (freqData[bin] ?? 0) / 255;
-        const visualV = assistantSpeaking ? Math.min(1, Math.pow(v, 0.72) * 1.2) : v;
-        const h = Math.max(assistantSpeaking ? 8 : 2, visualV * (height - 10));
-        const x = i * (barWidth + barGap);
-        const y = height - h - 2;
-        const hue = 210 - visualV * 75;
-        const light = 35 + visualV * 44;
-        ctx.fillStyle = `hsl(${hue}, 95%, ${light}%)`;
-        ctx.fillRect(x, y, barWidth, h);
-
-        if (assistantSpeaking) {
-          ctx.fillStyle = `hsla(${hue - 8}, 98%, 86%, 0.42)`;
-          ctx.fillRect(x, y, barWidth, 2);
-        }
+        const bin = Math.floor((i / bars) * Math.min(freqData.length, 768));
+        averageEnergy += (freqData[bin] ?? 0) / 255;
       }
+      averageEnergy /= bars;
+
+      const active = listening || assistantSpeaking;
+      const pulse = active ? Math.min(1, Math.pow(averageEnergy, 0.72) * 1.35) : 0.1 + 0.05 * Math.sin(now * 0.002);
+      const rotation = now * (active ? 0.0007 : 0.00025);
+      const outerRadius = baseRadius + pulse * 26;
+
+      const halo = ctx.createRadialGradient(0, 0, baseRadius * 0.55, 0, 0, outerRadius + 74);
+      halo.addColorStop(0, `rgba(45, 212, 191, ${0.18 + pulse * 0.14})`);
+      halo.addColorStop(0.46, `rgba(96, 165, 250, ${0.1 + pulse * 0.1})`);
+      halo.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, outerRadius + 74, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let ring = 0; ring < 3; ring += 1) {
+        const phase = now * 0.0022 + ring * 1.7;
+        const radius = baseRadius + ring * 24 + pulse * (14 + ring * 4) + Math.sin(phase) * 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.lineWidth = ring === 0 ? 3.5 : 1.5;
+        ctx.strokeStyle =
+          ring === 0
+            ? `rgba(20, 184, 166, ${0.58 + pulse * 0.25})`
+            : ring === 1
+              ? `rgba(59, 130, 246, ${0.28 + pulse * 0.22})`
+              : `rgba(251, 191, 36, ${0.22 + pulse * 0.16})`;
+        ctx.stroke();
+      }
+
+      ctx.rotate(rotation);
+      for (let i = 0; i < bars; i += 1) {
+        const angle = (i / bars) * Math.PI * 2;
+        const bin = Math.floor((i / bars) * Math.min(freqData.length, 768));
+        const raw = (freqData[bin] ?? 0) / 255;
+        const visualV = active ? Math.min(1, Math.pow(raw, 0.62) * 1.25) : 0.08 + 0.05 * Math.sin(now * 0.002 + i * 0.34);
+        const lineLength = 8 + visualV * 42;
+        const radius = outerRadius + 12 + Math.sin(now * 0.003 + i * 0.18) * 3;
+        const innerX = Math.cos(angle) * radius;
+        const innerY = Math.sin(angle) * radius;
+        const outerX = Math.cos(angle) * (radius + lineLength);
+        const outerY = Math.sin(angle) * (radius + lineLength);
+        const hue = 176 + visualV * 34 + (i % 9) * 3;
+
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.lineTo(outerX, outerY);
+        ctx.lineWidth = 1.1 + visualV * 2.4;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = `hsla(${hue}, 86%, ${54 + visualV * 18}%, ${0.34 + visualV * 0.56})`;
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 5; i += 1) {
+        const angle = rotation * (1.4 + i * 0.08) + i * ((Math.PI * 2) / 5);
+        const radius = outerRadius + 30 + Math.sin(now * 0.002 + i) * 9;
+        const dotSize = 2.6 + pulse * 3 + (i % 2) * 1.5;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, dotSize, 0, Math.PI * 2);
+        ctx.fillStyle = i % 2 === 0 ? "rgba(45, 212, 191, 0.82)" : "rgba(251, 191, 36, 0.72)";
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, baseRadius * 0.52 + pulse * 7, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(15, 23, 42, ${0.04 + pulse * 0.04})`;
+      ctx.fill();
+      ctx.restore();
 
       visualizerRafRef.current = window.requestAnimationFrame(render);
     };
@@ -177,4 +238,3 @@ export function useMicVisualizer({
     visualizerCanvasRef,
   };
 }
-
