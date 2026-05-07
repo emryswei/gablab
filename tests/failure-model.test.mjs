@@ -12,6 +12,8 @@ test("validateFailureModel requires coverage across frontend, backend, database,
         signal: "Manual review or browser behavior shows stale state.",
         detection: "Component and browser checks.",
         response: "Fix state ownership.",
+        checks: ["npm test"],
+        classifications: ["test"],
       },
       {
         id: "api-1",
@@ -20,6 +22,8 @@ test("validateFailureModel requires coverage across frontend, backend, database,
         signal: "Invalid request succeeds.",
         detection: "Route validation tests.",
         response: "Reject with typed errors.",
+        checks: ["npm run smoke"],
+        classifications: ["smoke"],
       },
       {
         id: "data-1",
@@ -28,6 +32,8 @@ test("validateFailureModel requires coverage across frontend, backend, database,
         signal: "Adjacent data is inconsistent.",
         detection: "Query contract tests or seeded checks.",
         response: "Patch query and seed regression.",
+        checks: ["npm test"],
+        classifications: ["runtime"],
       },
       {
         id: "quality-1",
@@ -36,6 +42,8 @@ test("validateFailureModel requires coverage across frontend, backend, database,
         signal: "Lint, typecheck, build, or failure model gate fails.",
         detection: "npm run quality.",
         response: "Fix the failing gate before continuing.",
+        checks: ["npm run quality"],
+        classifications: ["lint", "typecheck", "build"],
       },
     ],
   });
@@ -53,6 +61,8 @@ test("validateFailureModel rejects duplicate ids and missing layer coverage", ()
         signal: "B",
         detection: "C",
         response: "D",
+        checks: ["npm test"],
+        classifications: ["test"],
       },
       {
         id: "same",
@@ -61,6 +71,8 @@ test("validateFailureModel rejects duplicate ids and missing layer coverage", ()
         signal: "B",
         detection: "C",
         response: "D",
+        checks: ["npm test"],
+        classifications: ["test"],
       },
     ],
   });
@@ -69,4 +81,3 @@ test("validateFailureModel rejects duplicate ids and missing layer coverage", ()
   assert.match(result.errors.join("\n"), /duplicate failure id: same/);
   assert.match(result.errors.join("\n"), /failure model must cover backend/);
 });
-

@@ -6,7 +6,9 @@
       "risk": "The speaking UI may show a status that does not match the real microphone, loading, or assistant-speaking state.",
       "signal": "A user sees Listening, Thinking, Waiting, or Conversation ended while the browser is doing something else.",
       "detection": "Review state ownership in the client component and add a focused test or browser check for any changed interaction.",
-      "response": "Keep browser-only behavior in Client Components, make state transitions explicit, and avoid derived state stored in effects when render-time derivation is enough."
+      "response": "Keep browser-only behavior in Client Components, make state transitions explicit, and avoid derived state stored in effects when render-time derivation is enough.",
+      "checks": ["npm test", "npm run smoke", "npm run lint", "npm run typecheck"],
+      "classifications": ["test", "smoke", "runtime"]
     },
     {
       "id": "backend-input-contract",
@@ -14,7 +16,9 @@
       "risk": "API routes may accept malformed input or return an untyped error shape.",
       "signal": "Invalid JSON, empty utterances, bad TTS text, or upstream provider failures produce inconsistent responses.",
       "detection": "Exercise request parsing, missing fields, provider failures, and success payloads with route-level tests when routes change.",
-      "response": "Validate request bodies at the route boundary and return stable JSON errors with appropriate HTTP status codes."
+      "response": "Validate request bodies at the route boundary and return stable JSON errors with appropriate HTTP status codes.",
+      "checks": ["npm test", "npm run smoke", "npm run typecheck"],
+      "classifications": ["test", "smoke", "runtime"]
     },
     {
       "id": "database-word-navigation",
@@ -22,7 +26,9 @@
       "risk": "Vocabulary navigation may return the wrong previous or next word around first, last, duplicate, or missing records.",
       "signal": "The vocabulary page jumps unexpectedly, repeats a word, or fails when the table is empty.",
       "detection": "Use seeded database checks or repository-level contract tests for getWord, getRandomWord, and getAdjacentWords when data code changes.",
-      "response": "Keep SQL access behind lib/mysql.ts, preserve typed return shapes, and add regression data for boundary cases."
+      "response": "Keep SQL access behind lib/mysql.ts, preserve typed return shapes, and add regression data for boundary cases.",
+      "checks": ["npm test", "npm run typecheck", "npm run build"],
+      "classifications": ["test", "runtime", "requirement"]
     },
     {
       "id": "quality-false-green",
@@ -30,8 +36,9 @@
       "risk": "A change can pass a narrow unit test while still breaking lint rules, TypeScript contracts, route integration, or documented failure coverage.",
       "signal": "npm test passes but npm run lint, npm run typecheck, npm run build, or npm run failure-model fails.",
       "detection": "Run npm run quality locally and in CI for changes that affect application behavior.",
-      "response": "Treat any failing deterministic gate as a failed Ralph iteration and fix the first failing signal before broadening scope."
+      "response": "Treat any failing deterministic gate as a failed Ralph iteration and fix the first failing signal before broadening scope.",
+      "checks": ["npm run quality", "npm run build"],
+      "classifications": ["lint", "typecheck", "build", "coverage"]
     }
   ]
 }
-

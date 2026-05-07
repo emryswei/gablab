@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "test": "node --experimental-strip-types --test tests/**/*.test.mjs tests/**/*.test.mts",
+    "smoke": "node --experimental-strip-types scripts/smoke.mjs",
     "failure-model": "node scripts/failure-model.mjs",
-    "quality": "npm run failure-model && npm test && npm run lint && npm run typecheck",
+    "quality": "npm run failure-model && npm test && npm run smoke && npm run lint && npm run typecheck",
     "ralph": "node scripts/ralph-loop.mjs .agents/ralph/gablab-quality-loop",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"

@@ -3,6 +3,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REQUIRED_LAYERS = new Set(["frontend", "backend", "database", "quality"]);
+const ALLOWED_CLASSIFICATIONS = new Set([
+  "test",
+  "lint",
+  "typecheck",
+  "build",
+  "smoke",
+  "runtime",
+  "flaky",
+  "coverage",
+  "requirement",
+]);
 
 export function validateFailureModel(model) {
   const errors = [];
@@ -40,6 +51,26 @@ export function validateFailureModel(model) {
     for (const field of ["risk", "signal", "detection", "response"]) {
       if (typeof failure[field] !== "string" || !failure[field].trim()) {
         errors.push(`failure ${failure.id ?? "<unknown>"} needs ${field}`);
+      }
+    }
+
+    if (!Array.isArray(failure.checks) || failure.checks.length === 0) {
+      errors.push(`failure ${failure.id ?? "<unknown>"} needs non-empty checks`);
+    } else {
+      for (const check of failure.checks) {
+        if (typeof check !== "string" || !check.trim()) {
+          errors.push(`failure ${failure.id ?? "<unknown>"} has an invalid check`);
+        }
+      }
+    }
+
+    if (!Array.isArray(failure.classifications) || failure.classifications.length === 0) {
+      errors.push(`failure ${failure.id ?? "<unknown>"} needs non-empty classifications`);
+    } else {
+      for (const classification of failure.classifications) {
+        if (!ALLOWED_CLASSIFICATIONS.has(classification)) {
+          errors.push(`failure ${failure.id ?? "<unknown>"} has unsupported classification: ${classification}`);
+        }
       }
     }
   }
@@ -81,4 +112,3 @@ function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }
-
