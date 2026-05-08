@@ -81,6 +81,7 @@ export default function SpeakingCoach() {
   const [history, setHistory] = useState<ChatTurn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedAccent, setSelectedAccent] = useState<EnglishAccent>("en-GB");
+  const hasTextPanelContent = Boolean(coachReply || transcript || interim || error);
   const { availableAccentLangs, browserVoicesRef } = useBrowserVoices();
   const {
     aiSpeakingSeedRef,
@@ -402,11 +403,7 @@ export default function SpeakingCoach() {
   }, []);
 
   return (
-    <section
-      style={{
-        padding: 16,
-      }}
-    >
+    <section className={hasTextPanelContent ? styles.speakingLayout : styles.speakingLayoutSolo}>
       {/* <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button type="button" onClick={startConversation} disabled={!isSupported || isLoading}>
           Restart Conversation
@@ -422,47 +419,41 @@ export default function SpeakingCoach() {
         </p>
       ) : null}
 
-      <AccentSelector
-        availableAccentLangs={availableAccentLangs}
-        selectedAccent={selectedAccent}
-        onAccentChange={setSelectedAccent}
-      />
-
-      <div className={styles.spectrogramFrame} aria-hidden="true">
-        <canvas ref={visualizerCanvasRef} className={styles.spectrogramCanvas} width={360} height={360} />
+      <div className={styles.visualColumn}>
+        <canvas
+          ref={visualizerCanvasRef}
+          className={styles.spectrogramCanvas}
+          width={360}
+          height={360}
+          aria-hidden="true"
+        />
+        <AccentSelector
+          availableAccentLangs={availableAccentLangs}
+          selectedAccent={selectedAccent}
+          onAccentChange={setSelectedAccent}
+        />
       </div>
 
-      {coachReply ? (
-        <div
-          style={{
-            marginTop: 14,
-            border: "1px solid #d1d5db",
-            borderRadius: 10,
-            padding: 12,
-            background: "#fff",
-          }}
-        >
-          <p style={{ marginTop: 8 }}>
-            <strong>AI reply:</strong> {coachReply}
-          </p>
+      {hasTextPanelContent ? (
+        <div className={styles.textColumn}>
+          {coachReply ? (
+            <div className={styles.replyPanel}>
+              <p>
+                <strong>AI reply:</strong> {coachReply}
+              </p>
+            </div>
+          ) : null}
+
+          {transcript || interim ? (
+            <div className={styles.transcriptPanel}>
+              <div className={styles.panelLabel}>You said</div>
+              <p>{`${transcript} ${interim}`.trim()}</p>
+            </div>
+          ) : null}
+
+          {error ? <p className={styles.errorText}>{error}</p> : null}
         </div>
       ) : null}
-
-      <div
-        style={{
-          marginTop: 14,
-          border: "1px solid #e5e7eb",
-          borderRadius: 10,
-          padding: 12,
-          minHeight: 90,
-          background: "#fff",
-        }}
-      >
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>You said</div>
-        <p style={{ marginTop: 6, fontSize: 18 }}>{`${transcript} ${interim}`.trim() || "..."}</p>
-      </div>
-
-      {error ? <p style={{ marginTop: 12, color: "#b42318" }}>{error}</p> : null}
     </section>
   );
 }

@@ -143,32 +143,42 @@ export function useMicVisualizer({
 
       const active = listening || assistantSpeaking;
       const pulse = active ? Math.min(1, Math.pow(averageEnergy, 0.72) * 1.35) : 0.1 + 0.05 * Math.sin(now * 0.002);
-      const rotation = now * (active ? 0.0007 : 0.00025);
+      const rotation = now * (active ? 0.0012 : 0.00042);
       const outerRadius = baseRadius + pulse * 26;
 
-      const halo = ctx.createRadialGradient(0, 0, baseRadius * 0.55, 0, 0, outerRadius + 74);
-      halo.addColorStop(0, `rgba(45, 212, 191, ${0.18 + pulse * 0.14})`);
-      halo.addColorStop(0.46, `rgba(96, 165, 250, ${0.1 + pulse * 0.1})`);
-      halo.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.globalCompositeOperation = "lighter";
+      const halo = ctx.createRadialGradient(0, 0, baseRadius * 0.3, 0, 0, outerRadius + 84);
+      halo.addColorStop(0, `rgba(236, 72, 153, ${0.1 + pulse * 0.12})`);
+      halo.addColorStop(0.42, `rgba(34, 211, 238, ${0.1 + pulse * 0.14})`);
+      halo.addColorStop(0.72, `rgba(168, 85, 247, ${0.05 + pulse * 0.09})`);
+      halo.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = halo;
       ctx.beginPath();
       ctx.arc(0, 0, outerRadius + 74, 0, Math.PI * 2);
       ctx.fill();
 
-      for (let ring = 0; ring < 3; ring += 1) {
-        const phase = now * 0.0022 + ring * 1.7;
-        const radius = baseRadius + ring * 24 + pulse * (14 + ring * 4) + Math.sin(phase) * 4;
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-        ctx.lineWidth = ring === 0 ? 3.5 : 1.5;
-        ctx.strokeStyle =
-          ring === 0
-            ? `rgba(20, 184, 166, ${0.58 + pulse * 0.25})`
-            : ring === 1
-              ? `rgba(59, 130, 246, ${0.28 + pulse * 0.22})`
-              : `rgba(251, 191, 36, ${0.22 + pulse * 0.16})`;
-        ctx.stroke();
+      for (let ring = 0; ring < 4; ring += 1) {
+        const phase = now * 0.0028 + ring * 1.7;
+        const radius = baseRadius + ring * 21 + pulse * (12 + ring * 5) + Math.sin(phase) * 4;
+        const segments = 14 + ring * 4;
+        const gap = 0.036 + ring * 0.006;
+        ctx.lineWidth = ring === 0 ? 4.2 : 1.8;
+        ctx.shadowBlur = ring === 0 ? 18 : 10;
+        ctx.shadowColor = ring % 2 === 0 ? "#22d3ee" : "#ec4899";
+
+        for (let segment = 0; segment < segments; segment += 1) {
+          const start = rotation * (ring % 2 === 0 ? 1 : -1) + (segment / segments) * Math.PI * 2;
+          const end = start + Math.PI * 2 * (0.5 / segments) - gap;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, start, end);
+          ctx.strokeStyle =
+            ring % 2 === 0
+              ? `rgba(34, 211, 238, ${0.42 + pulse * 0.42})`
+              : `rgba(236, 72, 153, ${0.28 + pulse * 0.36})`;
+          ctx.stroke();
+        }
       }
+      ctx.shadowBlur = 0;
 
       ctx.rotate(rotation);
       for (let i = 0; i < bars; i += 1) {
@@ -176,37 +186,60 @@ export function useMicVisualizer({
         const bin = Math.floor((i / bars) * Math.min(freqData.length, 768));
         const raw = (freqData[bin] ?? 0) / 255;
         const visualV = active ? Math.min(1, Math.pow(raw, 0.62) * 1.25) : 0.08 + 0.05 * Math.sin(now * 0.002 + i * 0.34);
-        const lineLength = 8 + visualV * 42;
-        const radius = outerRadius + 12 + Math.sin(now * 0.003 + i * 0.18) * 3;
+        const glitch = i % 13 === 0 ? Math.max(0, Math.sin(now * 0.012 + i)) * 14 : 0;
+        const lineLength = 10 + visualV * 54 + glitch;
+        const radius = outerRadius + 16 + Math.sin(now * 0.004 + i * 0.18) * 4;
         const innerX = Math.cos(angle) * radius;
         const innerY = Math.sin(angle) * radius;
         const outerX = Math.cos(angle) * (radius + lineLength);
         const outerY = Math.sin(angle) * (radius + lineLength);
-        const hue = 176 + visualV * 34 + (i % 9) * 3;
+        const hue = i % 5 === 0 ? 322 : 184 + visualV * 18;
 
         ctx.beginPath();
         ctx.moveTo(innerX, innerY);
         ctx.lineTo(outerX, outerY);
-        ctx.lineWidth = 1.1 + visualV * 2.4;
+        ctx.lineWidth = 1 + visualV * 2.8;
         ctx.lineCap = "round";
-        ctx.strokeStyle = `hsla(${hue}, 86%, ${54 + visualV * 18}%, ${0.34 + visualV * 0.56})`;
+        ctx.shadowBlur = 12 + visualV * 12;
+        ctx.shadowColor = i % 5 === 0 ? "#ec4899" : "#22d3ee";
+        ctx.strokeStyle = `hsla(${hue}, 96%, ${56 + visualV * 18}%, ${0.38 + visualV * 0.58})`;
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+
+      for (let i = 0; i < 8; i += 1) {
+        const angle = rotation * (1.8 + i * 0.06) + i * ((Math.PI * 2) / 8);
+        const radius = outerRadius + 36 + Math.sin(now * 0.0026 + i) * 12;
+        const dotSize = 2 + pulse * 4 + (i % 2) * 1.2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, dotSize, 0, Math.PI * 2);
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = i % 2 === 0 ? "#22d3ee" : "#ec4899";
+        ctx.fillStyle = i % 2 === 0 ? "rgba(34, 211, 238, 0.92)" : "rgba(236, 72, 153, 0.86)";
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      ctx.rotate(-rotation * 1.7);
+      ctx.strokeStyle = `rgba(250, 204, 21, ${0.22 + pulse * 0.24})`;
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 6; i += 1) {
+        const angle = i * (Math.PI / 3) + now * 0.0008;
+        const start = baseRadius * 0.28;
+        const end = baseRadius * 0.46 + pulse * 11;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(angle) * start, Math.sin(angle) * start);
+        ctx.lineTo(Math.cos(angle) * end, Math.sin(angle) * end);
         ctx.stroke();
       }
 
-      for (let i = 0; i < 5; i += 1) {
-        const angle = rotation * (1.4 + i * 0.08) + i * ((Math.PI * 2) / 5);
-        const radius = outerRadius + 30 + Math.sin(now * 0.002 + i) * 9;
-        const dotSize = 2.6 + pulse * 3 + (i % 2) * 1.5;
-        ctx.beginPath();
-        ctx.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, dotSize, 0, Math.PI * 2);
-        ctx.fillStyle = i % 2 === 0 ? "rgba(45, 212, 191, 0.82)" : "rgba(251, 191, 36, 0.72)";
-        ctx.fill();
-      }
-
       ctx.beginPath();
-      ctx.arc(0, 0, baseRadius * 0.52 + pulse * 7, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(15, 23, 42, ${0.04 + pulse * 0.04})`;
+      ctx.arc(0, 0, baseRadius * 0.5 + pulse * 9, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(3, 7, 18, ${0.72 - pulse * 0.12})`;
       ctx.fill();
+      ctx.strokeStyle = `rgba(34, 211, 238, ${0.45 + pulse * 0.34})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.restore();
 
       visualizerRafRef.current = window.requestAnimationFrame(render);
