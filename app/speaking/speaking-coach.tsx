@@ -60,7 +60,6 @@ export default function SpeakingCoach() {
   const historyRef = useRef<ChatTurn[]>([]);
   const silenceTimerRef = useRef<number | null>(null);
   const noInputTimerRef = useRef<number | null>(null);
-  const startedRef = useRef(false);
   const turnFinalTextRef = useRef("");
   const turnInterimTextRef = useRef("");
   const hasSpokenInTurnRef = useRef(false);
@@ -77,16 +76,17 @@ export default function SpeakingCoach() {
   const [isLoading, setIsLoading] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [interim, setInterim] = useState("");
+  const [lastUserUtterance, setLastUserUtterance] = useState("");
   const [coachReply, setCoachReply] = useState<string | null>(null);
   const [history, setHistory] = useState<ChatTurn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedAccent, setSelectedAccent] = useState<EnglishAccent>("en-GB");
-  const hasTextPanelContent = Boolean(coachReply || transcript || interim || error);
+  const displayedUserUtterance = `${transcript} ${interim}`.trim() || lastUserUtterance;
+  const hasTextPanelContent = Boolean(coachReply || displayedUserUtterance || error);
   const { availableAccentLangs, browserVoicesRef } = useBrowserVoices();
   const {
     aiSpeakingSeedRef,
     aiSpeakingStartedAtRef,
-    isAssistantSpeaking,
     isAssistantSpeakingRef,
     speakOutLoud,
     stopAssistantSpeech,
@@ -177,6 +177,7 @@ export default function SpeakingCoach() {
     clearNoInputTimer();
     intentionalStopRef.current = true;
     recognitionRef.current?.stop();
+    isListeningRef.current = false;
     setIsListening(false);
   };
 
@@ -249,6 +250,7 @@ export default function SpeakingCoach() {
       return;
     }
 
+    setLastUserUtterance(userUtterance);
     sendToCoach(userUtterance);
   };
 
@@ -262,7 +264,7 @@ export default function SpeakingCoach() {
   };
 
   const startListeningTurn = async (mode: "normal" | "confirm" = "normal") => {
-    if (!isSupported || !conversationActiveRef.current || isLoading || isAssistantSpeaking) return;
+    if (!isSupported || !conversationActiveRef.current || isLoadingRef.current || isAssistantSpeakingRef.current) return;
     setError(null);
     currentTurnModeRef.current = mode;
     resetTurnBuffers();
@@ -311,6 +313,7 @@ export default function SpeakingCoach() {
 
     recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
       clearSilenceTimer();
+      isListeningRef.current = false;
       setIsListening(false);
       const errorCode = event.error;
 
@@ -334,7 +337,11 @@ export default function SpeakingCoach() {
     recognition.onend = () => {
       clearSilenceTimer();
       clearNoInputTimer();
+      isListeningRef.current = false;
       setIsListening(false);
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+      }
       const wasIntentionalStop = intentionalStopRef.current;
       intentionalStopRef.current = false;
 
@@ -355,16 +362,28 @@ export default function SpeakingCoach() {
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
+    try {
+      recognition.start();
+      isListeningRef.current = true;
+      setIsListening(true);
+    } catch (err) {
+      recognitionRef.current = null;
+      clearNoInputTimer();
+      isListeningRef.current = false;
+      setIsListening(false);
+      setError(err instanceof Error ? err.message : "Speech recognition could not start. Try again.");
+    }
   };
 
   const startConversation = () => {
     if (!isSupported) return;
     setError(null);
+    setIsLoading(false);
     setCoachReply(null);
+    setLastUserUtterance("");
     setHistory([]);
     historyRef.current = [];
+    resetTurnBuffers();
     conversationActiveRef.current = true;
     stopRecognition();
 
@@ -373,6 +392,7 @@ export default function SpeakingCoach() {
         void startListeningTurn("normal");
       }
     });
+
   };
 
   const endConversation = (message?: string) => {
@@ -386,8 +406,7 @@ export default function SpeakingCoach() {
   };
 
   useEffect(() => {
-    if (isSupported && !startedRef.current) {
-      startedRef.current = true;
+    if (isSupported) {
       startConversation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -444,10 +463,10 @@ export default function SpeakingCoach() {
             </div>
           ) : null}
 
-          {transcript || interim ? (
+          {displayedUserUtterance ? (
             <div className={styles.transcriptPanel}>
               <div className={styles.panelLabel}>You said</div>
-              <p>{`${transcript} ${interim}`.trim()}</p>
+              <p>{displayedUserUtterance}</p>
             </div>
           ) : null}
 

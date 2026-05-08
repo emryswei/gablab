@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { selectBrowserVoice, type EnglishAccent } from "@/lib/speaking/browser-voices";
 
 type TtsFallbackResponse = {
@@ -36,7 +36,12 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
     isAssistantSpeakingRef.current = isAssistantSpeaking;
   }, [isAssistantSpeaking]);
 
-  const stopAssistantSpeech = () => {
+  const setAssistantSpeaking = useCallback((speaking: boolean) => {
+    isAssistantSpeakingRef.current = speaking;
+    setIsAssistantSpeaking(speaking);
+  }, []);
+
+  const stopAssistantSpeech = useCallback(() => {
     if (ttsAudioRef.current) {
       ttsAudioRef.current.pause();
       ttsAudioRef.current.src = "";
@@ -48,14 +53,14 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-    setIsAssistantSpeaking(false);
-  };
+    setAssistantSpeaking(false);
+  }, [setAssistantSpeaking]);
 
   const speakWithBrowserVoice = (text: string, onDone?: () => void) => {
     setError(null);
 
     if (!("speechSynthesis" in window)) {
-      setIsAssistantSpeaking(false);
+      setAssistantSpeaking(false);
       onDone?.();
       return;
     }
@@ -69,12 +74,11 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
     utterance.rate = 0.96;
     utterance.pitch = 1;
     utterance.onend = () => {
-      setIsAssistantSpeaking(false);
+      setAssistantSpeaking(false);
       onDone?.();
     };
     utterance.onerror = () => {
-      setIsAssistantSpeaking(false);
-      onDone?.();
+      setAssistantSpeaking(false);
     };
     window.speechSynthesis.speak(utterance);
   };
@@ -85,7 +89,7 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
       return;
     }
 
-    setIsAssistantSpeaking(true);
+    setAssistantSpeaking(true);
     aiSpeakingStartedAtRef.current = performance.now();
     aiSpeakingSeedRef.current = hashText(text);
     setError(null);
@@ -132,12 +136,11 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
       const audio = new Audio(objectUrl);
       ttsAudioRef.current = audio;
       audio.onended = () => {
-        setIsAssistantSpeaking(false);
+        setAssistantSpeaking(false);
         onDone?.();
       };
       audio.onerror = () => {
-        setIsAssistantSpeaking(false);
-        onDone?.();
+        setAssistantSpeaking(false);
       };
       await audio.play();
     } catch (err) {
@@ -146,7 +149,7 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
     }
   };
 
-  useEffect(() => stopAssistantSpeech, []);
+  useEffect(() => stopAssistantSpeech, [stopAssistantSpeech]);
 
   return {
     aiSpeakingSeedRef,
