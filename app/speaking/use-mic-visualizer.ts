@@ -26,14 +26,14 @@ export function useMicVisualizer({
 
   const ensureMicVisualizer = async () => {
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      return;
+      return null;
     }
 
     if (analyserRef.current && audioContextRef.current) {
       if (audioContextRef.current.state === "suspended") {
         await audioContextRef.current.resume();
       }
-      return;
+      return micStreamRef.current;
     }
 
     try {
@@ -56,8 +56,10 @@ export function useMicVisualizer({
       audioContextRef.current = audioContext;
       micSourceRef.current = source;
       analyserRef.current = analyser;
+      return stream;
     } catch {
       setError("Microphone access is required for real-time wave visualization.");
+      return null;
     }
   };
 

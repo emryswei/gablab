@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { selectBrowserVoice, type EnglishAccent } from "@/lib/speaking/browser-voices";
+import {
+  CANTONESE_LOCALE,
+  selectBrowserVoice,
+  type AssistantVoiceLocale,
+  type CantoneseVoice,
+} from "@/lib/speaking/browser-voices";
 
 type TtsFallbackResponse = {
   fallback?: boolean;
@@ -10,7 +15,8 @@ type TtsFallbackResponse = {
 
 type UseAssistantSpeechOptions = {
   browserVoicesRef: React.RefObject<SpeechSynthesisVoice[]>;
-  selectedAccentRef: React.RefObject<EnglishAccent>;
+  selectedVoiceLocaleRef: React.RefObject<AssistantVoiceLocale>;
+  selectedCantoneseVoiceRef: React.RefObject<CantoneseVoice>;
   setError: (message: string | null) => void;
 };
 
@@ -24,7 +30,12 @@ function hashText(text: string) {
   return (hash % 997) + 1;
 }
 
-export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setError }: UseAssistantSpeechOptions) {
+export function useAssistantSpeech({
+  browserVoicesRef,
+  selectedVoiceLocaleRef,
+  selectedCantoneseVoiceRef,
+  setError,
+}: UseAssistantSpeechOptions) {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const ttsObjectUrlRef = useRef<string | null>(null);
   const aiSpeakingStartedAtRef = useRef(0);
@@ -67,9 +78,10 @@ export function useAssistantSpeech({ browserVoicesRef, selectedAccentRef, setErr
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    const accent = selectedAccentRef.current;
-    const voice = selectBrowserVoice(browserVoicesRef.current, accent);
-    utterance.lang = voice?.lang ?? accent;
+    const voiceLocale = selectedVoiceLocaleRef.current;
+    const preferredVoice = voiceLocale === CANTONESE_LOCALE ? selectedCantoneseVoiceRef.current : undefined;
+    const voice = selectBrowserVoice(browserVoicesRef.current, voiceLocale, preferredVoice);
+    utterance.lang = voice?.lang ?? voiceLocale;
     utterance.voice = voice;
     utterance.rate = 0.96;
     utterance.pitch = 1;

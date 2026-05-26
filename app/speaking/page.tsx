@@ -1,18 +1,23 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import styles from "./page.module.css";
 import SpeakingCoach from "./speaking-coach";
 
 export default function SpeakingPage() {
   return (
-    <main style={{ maxWidth: 900, margin: "40px auto", padding: "0 16px", fontFamily: "sans-serif" }}>
-      <div style={{ marginTop: 0 }}>
-        <Button asChild variant="outline">
+    <main className={styles.page}>
+      <div className={styles.topBar}>
+        <Button asChild variant="outline" className={styles.backButton}>
           <Link href="/">Back</Link>
         </Button>
+        <div className={styles.pageTitle}>
+          <p>Live neural voice lab</p>
+          <h1>Speaking</h1>
+        </div>
       </div>
 
-      <section style={{ marginTop: 16 }}>
+      <section className={styles.practiceShell}>
         <SpeakingCoach />
       </section>
     </main>

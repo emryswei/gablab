@@ -13,10 +13,10 @@
     {
       "id": "backend-input-contract",
       "layer": "backend",
-      "risk": "API routes may accept malformed input or return an untyped error shape.",
-      "signal": "Invalid JSON, empty utterances, bad TTS text, or upstream provider failures produce inconsistent responses.",
-      "detection": "Exercise request parsing, missing fields, provider failures, and success payloads with route-level tests when routes change.",
-      "response": "Validate request bodies at the route boundary and return stable JSON errors with appropriate HTTP status codes.",
+      "risk": "API routes may accept malformed input, invalid recorded audio, missing local STT models, or return an untyped error shape.",
+      "signal": "Invalid JSON, empty utterances, malformed WAV data, missing SenseVoice assets, bad TTS text, or upstream provider failures produce inconsistent responses.",
+      "detection": "Exercise request parsing, WAV decoding, model configuration failures, provider failures, and success payloads with focused tests when routes change.",
+      "response": "Validate request bodies and audio formats at the route boundary, keep STT model setup explicit, and return stable JSON errors with appropriate HTTP status codes.",
       "checks": ["npm test", "npm run smoke", "npm run typecheck"],
       "classifications": ["test", "smoke", "runtime"]
     },

@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { EnglishAccent } from "@/lib/speaking/browser-voices";
+import {
+  CANTONESE_LOCALE,
+  type AssistantVoiceLocale,
+  type CantoneseVoice,
+  type EnglishAccent,
+  type SpeakingLanguage,
+} from "@/lib/speaking/browser-voices";
 import AccentSelector from "./accent-selector";
+import CantoneseVoiceSelector from "./cantonese-voice-selector";
+import LanguageSelector from "./language-selector";
 import styles from "./speaking-coach.module.css";
 import { useAssistantSpeech } from "./use-assistant-speech";
 import { useBrowserVoices } from "./use-browser-voices";
 import { useMicVisualizer } from "./use-mic-visualizer";
+import { useSenseVoiceStt } from "./use-sensevoice-stt";
 
 type CoachResponse = {
   coachReply: string;
@@ -48,12 +57,27 @@ type WindowWithSpeechRecognition = Window & {
   webkitSpeechRecognition?: new () => SpeechRecognitionLike;
 };
 
-const GREETING = "Hi, this is your english speaking assistant.";
 const SILENCE_MS = 1200;
 const NO_INPUT_PROMPT_MS = 15000;
 const NO_INPUT_CONFIRM_MS = 3000;
-const ARE_YOU_THERE_PROMPT = "Are you still there?";
-const GOODBYE_MESSAGE = "Okay, bye. Talk to you next time.";
+const LANGUAGE_COPY = {
+  english: {
+    greeting: "Hi, this is your English speaking assistant.",
+    noInputPrompt: "Are you still there?",
+    goodbye: "Okay, bye. Talk to you next time.",
+    noResponse: "No response detected. Conversation ended.",
+    assistantLabel: "AI reply:",
+    userLabel: "You said",
+  },
+  cantonese: {
+    greeting: "你好，我係你嘅廣東話練習助手。",
+    noInputPrompt: "你仲喺唔喺度？",
+    goodbye: "好啦，拜拜，下次再傾。",
+    noResponse: "未收到回應，對話已結束。",
+    assistantLabel: "AI 回覆：",
+    userLabel: "你講咗",
+  },
+} as const;
 
 export default function SpeakingCoach() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -70,8 +94,13 @@ export default function SpeakingCoach() {
   const isListeningRef = useRef(false);
   const isLoadingRef = useRef(false);
   const selectedAccentRef = useRef<EnglishAccent>("en-GB");
+  const selectedLanguageRef = useRef<SpeakingLanguage>("english");
+  const selectedVoiceLocaleRef = useRef<AssistantVoiceLocale>("en-GB");
+  const selectedCantoneseVoiceRef = useRef<CantoneseVoice>("Tracy");
+  const conversationSessionRef = useRef(0);
 
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
+  const [isAudioCaptureSupported, setIsAudioCaptureSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -81,8 +110,11 @@ export default function SpeakingCoach() {
   const [history, setHistory] = useState<ChatTurn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedAccent, setSelectedAccent] = useState<EnglishAccent>("en-GB");
+  const [selectedCantoneseVoice, setSelectedCantoneseVoice] = useState<CantoneseVoice>("Tracy");
+  const [selectedLanguage, setSelectedLanguage] = useState<SpeakingLanguage>("english");
   const displayedUserUtterance = `${transcript} ${interim}`.trim() || lastUserUtterance;
   const hasTextPanelContent = Boolean(coachReply || displayedUserUtterance || error);
+  const copy = LANGUAGE_COPY[selectedLanguage];
   const { availableAccentLangs, browserVoicesRef } = useBrowserVoices();
   const {
     aiSpeakingSeedRef,
@@ -92,7 +124,8 @@ export default function SpeakingCoach() {
     stopAssistantSpeech,
   } = useAssistantSpeech({
     browserVoicesRef,
-    selectedAccentRef,
+    selectedVoiceLocaleRef,
+    selectedCantoneseVoiceRef,
     setError,
   });
   const { ensureMicVisualizer, visualizerCanvasRef } = useMicVisualizer({
@@ -102,10 +135,12 @@ export default function SpeakingCoach() {
     isListeningRef,
     setError,
   });
+  const { captureAndTranscribe, stopCapture } = useSenseVoiceStt();
 
   useEffect(() => {
     const speechWindow = window as WindowWithSpeechRecognition;
-    setIsSupported(Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition));
+    setIsSpeechRecognitionSupported(Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition));
+    setIsAudioCaptureSupported(typeof navigator.mediaDevices?.getUserMedia === "function");
   }, []);
 
   useEffect(() => {
@@ -119,10 +154,6 @@ export default function SpeakingCoach() {
   useEffect(() => {
     isLoadingRef.current = isLoading;
   }, [isLoading]);
-
-  useEffect(() => {
-    selectedAccentRef.current = selectedAccent;
-  }, [selectedAccent]);
 
   const clearSilenceTimer = () => {
     if (silenceTimerRef.current !== null) {
@@ -140,7 +171,15 @@ export default function SpeakingCoach() {
 
   const isExitCommand = (text: string) => {
     const normalized = text.toLowerCase();
-    return normalized.includes("that's it") || normalized.includes("thats it") || normalized.includes("bye bye");
+    return (
+      normalized.includes("that's it") ||
+      normalized.includes("thats it") ||
+      normalized.includes("bye bye") ||
+      normalized.includes("拜拜") ||
+      normalized.includes("再見") ||
+      normalized.includes("再见") ||
+      normalized.includes("唔講")
+    );
   };
 
   const scheduleNoInputTimer = (mode: "normal" | "confirm") => {
@@ -151,7 +190,7 @@ export default function SpeakingCoach() {
 
       if (mode === "normal") {
         stopRecognition();
-        speakOutLoud(ARE_YOU_THERE_PROMPT, () => {
+        speakOutLoud(LANGUAGE_COPY[selectedLanguageRef.current].noInputPrompt, () => {
           if (conversationActiveRef.current) {
             void startListeningTurn("confirm");
           }
@@ -159,7 +198,7 @@ export default function SpeakingCoach() {
         return;
       }
 
-      endConversation("No response detected. Conversation ended.");
+      endConversation(LANGUAGE_COPY[selectedLanguageRef.current].noResponse);
     }, timeout);
   };
 
@@ -177,12 +216,15 @@ export default function SpeakingCoach() {
     clearNoInputTimer();
     intentionalStopRef.current = true;
     recognitionRef.current?.stop();
+    stopCapture();
     isListeningRef.current = false;
     setIsListening(false);
   };
 
   const sendToCoach = async (utterance: string) => {
     if (!utterance.trim() || !conversationActiveRef.current) return;
+    const requestSession = conversationSessionRef.current;
+    const requestLanguage = selectedLanguageRef.current;
     setIsLoading(true);
     setError(null);
 
@@ -193,6 +235,7 @@ export default function SpeakingCoach() {
         body: JSON.stringify({
           utterance,
           history: historyRef.current.slice(-8),
+          language: requestLanguage,
         }),
       });
 
@@ -202,10 +245,12 @@ export default function SpeakingCoach() {
       }
 
       const parsed: CoachResponse = {
-        coachReply: payload.coachReply ?? "Tell me more about your day.",
+        coachReply:
+          payload.coachReply ??
+          (requestLanguage === "cantonese" ? "你今日過成點呀？" : "Tell me more about your day."),
       };
 
-      if (!conversationActiveRef.current) {
+      if (!conversationActiveRef.current || requestSession !== conversationSessionRef.current) {
         return;
       }
 
@@ -219,14 +264,18 @@ export default function SpeakingCoach() {
       setCoachReply(parsed.coachReply);
 
       speakOutLoud(parsed.coachReply, () => {
-        if (conversationActiveRef.current) {
+        if (conversationActiveRef.current && requestSession === conversationSessionRef.current) {
           void startListeningTurn("normal");
         }
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to get AI coach response.");
+      if (requestSession === conversationSessionRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to get AI coach response.");
+      }
     } finally {
-      setIsLoading(false);
+      if (requestSession === conversationSessionRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -244,7 +293,7 @@ export default function SpeakingCoach() {
 
     if (isExitCommand(userUtterance)) {
       stopRecognition();
-      speakOutLoud(GOODBYE_MESSAGE, () => {
+      speakOutLoud(LANGUAGE_COPY[selectedLanguageRef.current].goodbye, () => {
         endConversation();
       });
       return;
@@ -264,19 +313,58 @@ export default function SpeakingCoach() {
   };
 
   const startListeningTurn = async (mode: "normal" | "confirm" = "normal") => {
-    if (!isSupported || !conversationActiveRef.current || isLoadingRef.current || isAssistantSpeakingRef.current) return;
+    const canCaptureSelectedLanguage =
+      selectedLanguageRef.current === "cantonese" ? isAudioCaptureSupported : isSpeechRecognitionSupported;
+    if (!canCaptureSelectedLanguage || !conversationActiveRef.current || isLoadingRef.current || isAssistantSpeakingRef.current) return;
     setError(null);
     currentTurnModeRef.current = mode;
     resetTurnBuffers();
     scheduleNoInputTimer(mode);
-    await ensureMicVisualizer();
+    const micStream = await ensureMicVisualizer();
+
+    if (selectedLanguageRef.current === "cantonese") {
+      if (!micStream) {
+        return;
+      }
+
+      const session = conversationSessionRef.current;
+      isListeningRef.current = true;
+      setIsListening(true);
+      try {
+        const utterance = await captureAndTranscribe(micStream, {
+          onSpeechStart: () => {
+            hasSpokenInTurnRef.current = true;
+            clearNoInputTimer();
+          },
+          onCaptureEnd: () => {
+            isListeningRef.current = false;
+            setIsListening(false);
+          },
+        });
+        if (!utterance || session !== conversationSessionRef.current || !conversationActiveRef.current) {
+          if (!utterance && session === conversationSessionRef.current && conversationActiveRef.current) {
+            setError("SenseVoice could not recognize that phrase. Please try again.");
+          }
+          return;
+        }
+
+        turnFinalTextRef.current = utterance;
+        setTranscript(utterance);
+        finalizeTurn();
+      } catch (err) {
+        if (session === conversationSessionRef.current) {
+          setError(err instanceof Error ? err.message : "Cantonese transcription failed.");
+        }
+      }
+      return;
+    }
 
     const speechWindow = window as WindowWithSpeechRecognition;
     const SpeechRecognitionCtor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SpeechRecognitionCtor) return;
 
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = selectedAccentRef.current;
+    recognition.lang = selectedVoiceLocaleRef.current;
     recognition.continuous = true;
     recognition.interimResults = true;
 
@@ -375,8 +463,11 @@ export default function SpeakingCoach() {
     }
   };
 
-  const startConversation = () => {
-    if (!isSupported) return;
+  const startConversation = (language: SpeakingLanguage = selectedLanguageRef.current) => {
+    const canCaptureLanguage = language === "cantonese" ? isAudioCaptureSupported : isSpeechRecognitionSupported;
+    if (!canCaptureLanguage) return;
+    const session = conversationSessionRef.current + 1;
+    conversationSessionRef.current = session;
     setError(null);
     setIsLoading(false);
     setCoachReply(null);
@@ -387,12 +478,42 @@ export default function SpeakingCoach() {
     conversationActiveRef.current = true;
     stopRecognition();
 
-    speakOutLoud(GREETING, () => {
-      if (conversationActiveRef.current) {
+    speakOutLoud(LANGUAGE_COPY[language].greeting, () => {
+      if (conversationActiveRef.current && session === conversationSessionRef.current) {
         void startListeningTurn("normal");
       }
     });
+  };
 
+  const handleLanguageChange = (language: SpeakingLanguage) => {
+    if (language === selectedLanguageRef.current) return;
+    if (language === "cantonese" && !isAudioCaptureSupported) {
+      setError("This browser cannot record audio for Cantonese recognition.");
+      return;
+    }
+    if (language === "english" && !isSpeechRecognitionSupported) {
+      setError("This browser does not support English SpeechRecognition. Use Chrome or Edge.");
+      return;
+    }
+    selectedLanguageRef.current = language;
+    selectedVoiceLocaleRef.current = language === "cantonese" ? CANTONESE_LOCALE : selectedAccentRef.current;
+    setSelectedLanguage(language);
+    stopAssistantSpeech();
+    stopRecognition();
+    startConversation(language);
+  };
+
+  const handleAccentChange = (accent: EnglishAccent) => {
+    selectedAccentRef.current = accent;
+    setSelectedAccent(accent);
+    if (selectedLanguageRef.current === "english") {
+      selectedVoiceLocaleRef.current = accent;
+    }
+  };
+
+  const handleCantoneseVoiceChange = (voice: CantoneseVoice) => {
+    selectedCantoneseVoiceRef.current = voice;
+    setSelectedCantoneseVoice(voice);
   };
 
   const endConversation = (message?: string) => {
@@ -406,11 +527,11 @@ export default function SpeakingCoach() {
   };
 
   useEffect(() => {
-    if (isSupported) {
+    if (isSpeechRecognitionSupported) {
       startConversation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSupported]);
+  }, [isSpeechRecognitionSupported]);
 
   useEffect(() => {
     return () => {
@@ -432,7 +553,7 @@ export default function SpeakingCoach() {
         </Button>
       </div> */}
 
-      {!isSupported ? (
+      {selectedLanguage === "english" && !isSpeechRecognitionSupported ? (
         <p style={{ marginTop: 12, color: "#b42318" }}>
           Your browser does not support SpeechRecognition. Use Chrome/Edge for voice input.
         </p>
@@ -446,11 +567,22 @@ export default function SpeakingCoach() {
           height={360}
           aria-hidden="true"
         />
-        <AccentSelector
-          availableAccentLangs={availableAccentLangs}
-          selectedAccent={selectedAccent}
-          onAccentChange={setSelectedAccent}
-        />
+        <div className={styles.voiceControls}>
+          <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={handleLanguageChange} />
+          {selectedLanguage === "english" ? (
+            <AccentSelector
+              availableAccentLangs={availableAccentLangs}
+              selectedAccent={selectedAccent}
+              onAccentChange={handleAccentChange}
+            />
+          ) : (
+            <CantoneseVoiceSelector
+              availableVoices={browserVoicesRef.current}
+              selectedVoice={selectedCantoneseVoice}
+              onVoiceChange={handleCantoneseVoiceChange}
+            />
+          )}
+        </div>
       </div>
 
       {hasTextPanelContent ? (
@@ -458,14 +590,14 @@ export default function SpeakingCoach() {
           {coachReply ? (
             <div className={styles.replyPanel}>
               <p>
-                <strong>AI reply:</strong> {coachReply}
+                <strong>{copy.assistantLabel}</strong> {coachReply}
               </p>
             </div>
           ) : null}
 
           {displayedUserUtterance ? (
             <div className={styles.transcriptPanel}>
-              <div className={styles.panelLabel}>You said</div>
+              <div className={styles.panelLabel}>{copy.userLabel}</div>
               <p>{displayedUserUtterance}</p>
             </div>
           ) : null}

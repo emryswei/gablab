@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { getAdjacentWords, getRandomWord, getWord, type WordRow } from "@/lib/mysql";
+import styles from "./page.module.css";
 import WordViewer from "./word-viewer";
 
 export const dynamic = "force-dynamic";
@@ -39,33 +40,28 @@ export default async function VocabularyPage({ searchParams }: VocabularyPagePro
   }
 
   return (
-    <main style={{ maxWidth: 900, margin: "40px auto", padding: "0 16px", fontFamily: "sans-serif" }}>
-      <div style={{ marginTop: 0 }}>
-        <Button asChild variant="outline">
+    <main className={styles.page}>
+      <div className={styles.topBar}>
+        <Button asChild variant="outline" className={styles.backButton}>
           <Link href="/">Back</Link>
         </Button>
+        <div className={styles.pageTitle}>
+          <p>Lexical memory deck</p>
+          <h1>Vocabulary</h1>
+        </div>
       </div>
 
       {error ? (
-        <section
-          style={{
-            border: "1px solid #f1b7b7",
-            background: "#fff5f5",
-            borderRadius: 10,
-            padding: 14,
-            color: "#842029",
-            marginTop: 20,
-          }}
-        >
+        <section className={styles.errorPanel}>
           <strong>Database connection failed:</strong>
-          <pre style={{ whiteSpace: "pre-wrap", margin: "8px 0 0" }}>{error}</pre>
+          <pre>{error}</pre>
         </section>
       ) : !currentWord ? (
-        <section style={{ marginTop: 20 }}>
+        <section className={styles.emptyPanel}>
           <p>No words found in database.</p>
         </section>
       ) : (
-        <section style={{ marginTop: 24 }}>
+        <section className={styles.deckShell}>
           <WordViewer currentWord={currentWord} previousWord={previousWord} nextWord={nextWord} />
         </section>
       )}

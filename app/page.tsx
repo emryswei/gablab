@@ -9,8 +9,8 @@ const modes = [
   {
     href: "/speaking",
     title: "Speaking",
-    description: "Voice-first practice with a live AI coach.",
-    meta: ["Conversation", "Accent control", "Audio response"],
+    description: "Voice-first English and Cantonese practice with a live AI coach.",
+    meta: ["English / 粤语", "Accent control", "Audio response"],
     icon: Mic2,
     variant: "speaking",
   },
@@ -28,8 +28,11 @@ export default function Home() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>English practice workspace</p>
+        <p className={styles.eyebrow}>Language practice workspace</p>
         <h1>GabLab</h1>
+        <p className={styles.subhead}>
+          Pick a neural practice mode: speak with a live coach, or drill words through a focused review deck.
+        </p>
       </header>
 
       <section className={styles.modeGrid} aria-label="Practice modes">

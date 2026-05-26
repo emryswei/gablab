@@ -2,31 +2,66 @@
 .speakingLayoutSolo {
   display: grid;
   align-items: center;
-  padding: 12px 0;
+  min-height: 520px;
+  padding: 10px 0;
 }
 
 .speakingLayout {
-  grid-template-columns: minmax(260px, 0.92fr) minmax(320px, 1.08fr);
-  gap: 32px;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: clamp(26px, 5vw, 52px);
 }
 
 .speakingLayoutSolo {
-  grid-template-columns: minmax(260px, 420px);
+  grid-template-columns: minmax(260px, 440px);
   justify-content: center;
 }
 
 .visualColumn {
+  position: relative;
   display: grid;
   place-items: center;
   align-content: center;
+  min-height: 520px;
   min-width: 0;
 }
 
+.visualColumn::before {
+  position: absolute;
+  width: min(78vw, 430px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(103, 232, 249, 0.16);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(34, 211, 238, 0.09), transparent 58%),
+    conic-gradient(from 90deg, transparent, rgba(34, 211, 238, 0.16), transparent, rgba(244, 114, 182, 0.14), transparent);
+  filter: blur(0.2px);
+  content: "";
+}
+
 .spectrogramCanvas {
+  position: relative;
+  z-index: 1;
   display: block;
-  width: min(100%, 390px);
+  width: min(100%, 410px);
   aspect-ratio: 1;
   height: auto;
+  filter: drop-shadow(0 0 28px rgba(34, 211, 238, 0.22));
+}
+
+.voiceControls {
+  position: absolute;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.voiceControls .languageSelector,
+.voiceControls .accentSelector,
+.voiceControls .cantoneseVoiceSelector {
+  margin-top: 0;
 }
 
 .textColumn {
@@ -34,83 +69,179 @@
   align-content: center;
   gap: 14px;
   min-width: 0;
-  max-width: 440px;
+  max-width: 480px;
 }
 
 .accentSelector {
+  position: relative;
+  z-index: 2;
   display: inline-grid;
-  grid-template-columns: repeat(3, 48px);
+  grid-template-columns: repeat(3, 52px);
   gap: 4px;
-  margin-top: 4px;
-  padding: 4px;
-  border: 1px solid #d1d5db;
+  margin-top: 6px;
+  padding: 5px;
+  border: 1px solid rgba(103, 232, 249, 0.28);
   border-radius: 8px;
-  background: #f9fafb;
+  background: rgba(8, 13, 26, 0.78);
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.1), 0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.languageSelector {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(72px, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+  padding: 5px;
+  border: 1px solid rgba(244, 114, 182, 0.28);
+  border-radius: 8px;
+  background: rgba(8, 13, 26, 0.78);
+  box-shadow: 0 0 24px rgba(244, 114, 182, 0.1), 0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.languageButton,
+.languageButtonActive {
+  min-width: 72px;
+  height: 38px;
+  border: 0;
+  border-radius: 6px;
+  color: #b8cde0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 760;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.languageButton:hover {
+  color: #f8fbff;
+  background: rgba(244, 114, 182, 0.12);
+}
+
+.languageButtonActive {
+  color: #07111f;
+  background: #f472b6;
+  box-shadow: 0 0 18px rgba(244, 114, 182, 0.36);
+}
+
+.cantoneseVoiceSelector {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  grid-template-columns: repeat(2, 62px);
+  gap: 4px;
+  margin-top: 6px;
+  padding: 5px;
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  border-radius: 8px;
+  background: rgba(8, 13, 26, 0.78);
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.1), 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .accentButton,
-.accentButtonActive {
-  min-width: 48px;
-  height: 34px;
+.accentButtonActive,
+.cantoneseVoiceButton,
+.cantoneseVoiceButtonActive {
+  min-width: 52px;
+  height: 36px;
   border: 0;
   border-radius: 6px;
+  color: #b8cde0;
+  background: transparent;
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
-  color: #374151;
-  background: transparent;
+  font-weight: 760;
   cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.accentButton:hover {
-  background: #eef2ff;
+.accentButton:hover,
+.cantoneseVoiceButton:hover {
+  color: #f8fbff;
+  background: rgba(34, 211, 238, 0.1);
 }
 
-.accentButtonActive {
-  color: #ffffff;
-  background: #1f2937;
+.accentButtonActive,
+.cantoneseVoiceButtonActive {
+  color: #07111f;
+  background: #67e8f9;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.36);
 }
 
 .replyPanel,
 .transcriptPanel {
-  border: 1px solid #d1d5db;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
-  padding: 14px 16px;
-  background: #ffffff;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+  padding: 16px 18px;
+  background: rgba(8, 13, 26, 0.72);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+
+.replyPanel::before,
+.transcriptPanel::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #67e8f9;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.52);
+  content: "";
 }
 
 .replyPanel p,
 .transcriptPanel p {
+  position: relative;
   margin: 0;
 }
 
+.replyPanel strong {
+  color: #67e8f9;
+}
+
+.replyPanel p {
+  color: #d7e8f8;
+  line-height: 1.58;
+}
+
 .panelLabel {
+  position: relative;
+  color: #67e8f9;
   font-size: 12px;
-  font-weight: 700;
-  color: #6b7280;
+  font-weight: 780;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .transcriptPanel {
-  min-height: 90px;
-  border-color: #e5e7eb;
+  min-height: 104px;
 }
 
 .transcriptPanel p {
   margin-top: 8px;
-  font-size: 18px;
+  color: #f8fbff;
+  font-size: 19px;
   line-height: 1.45;
 }
 
 .errorText {
-  margin-top: 12px;
-  color: #b42318;
+  margin-top: 8px;
+  color: #fecdd3;
+  font-weight: 720;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 780px) {
   .speakingLayout {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 22px;
   }
 
   .speakingLayoutSolo {
@@ -118,10 +249,36 @@
   }
 
   .spectrogramCanvas {
-    width: min(100%, 320px);
+    width: min(100%, 330px);
+  }
+
+  .visualColumn {
+    min-height: 450px;
   }
 
   .textColumn {
     max-width: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .voiceControls {
+    display: grid;
+    gap: 6px;
+  }
+
+  .visualColumn {
+    min-height: 500px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accentButton,
+  .accentButtonActive,
+  .cantoneseVoiceButton,
+  .cantoneseVoiceButtonActive,
+  .languageButton,
+  .languageButtonActive {
+    transition-duration: 1ms;
   }
 }

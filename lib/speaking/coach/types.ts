@@ -1,3 +1,5 @@
+import type { SpeakingLanguage } from "../browser-voices.ts";
+
 export type ChatTurn = {
   role: "user" | "assistant";
   content: string;
@@ -6,6 +8,7 @@ export type ChatTurn = {
 export type CoachPayload = {
   utterance?: string;
   history?: ChatTurn[];
+  language?: SpeakingLanguage;
 };
 
 export type OpenAIMessage = {
@@ -44,4 +47,3 @@ export type ModelFailure = {
 };
 
 export type ModelResult = ModelSuccess | ModelFailure;
-

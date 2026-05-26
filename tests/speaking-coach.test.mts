@@ -35,6 +35,13 @@ test("buildCoachMessages trims history and appends the current utterance", () =>
   ]);
 });
 
+test("buildCoachMessages requests Traditional Cantonese replies for Cantonese mode", () => {
+  const messages = buildCoachMessages("今日好熱呀", [], "cantonese");
+
+  assert.match(messages[0].content, /Traditional Cantonese/);
+  assert.match(messages[0].content, /Hong Kong spoken Cantonese/);
+});
+
 test("createCoachResponse rejects missing utterance before provider call", async () => {
   let called = false;
   const response = await createCoachResponse({}, {}, async () => {
@@ -86,5 +93,24 @@ test("createCoachResponse can route to Cloudflare provider", async () => {
     feedback: "Good effort. Keep sentences short and clear.",
     coachReply: "Nice. What did you do today?",
   });
+});
+
+test("createCoachResponse forwards Cantonese conversation instructions", async () => {
+  let sentMessages: Array<{ role: string; content: string }> = [];
+  const response = await createCoachResponse(
+    { utterance: "我今日去咗飲茶", language: "cantonese" },
+    { OPENAI_API_KEY: "test-key" },
+    async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content: string }> };
+      sentMessages = body.messages;
+      return Response.json({ choices: [{ message: { content: "幾好喎，你食咗啲咩？" } }] });
+    },
+  );
+
+  assert.match(sentMessages[0].content, /Traditional Cantonese/);
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.coachReply, "幾好喎，你食咗啲咩？");
+  }
 });
 

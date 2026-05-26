@@ -21,6 +21,7 @@
 
 # production
 /build
+/models/
 
 # misc
 .DS_Store

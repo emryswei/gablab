@@ -10,6 +10,7 @@ scripts/                     Local quality and Ralph loop tooling
 tests/                       Node test runner tests for project tooling
 .agents/ralph/               Ralph loop packages, failure models, and run records
 public/                      Static assets and seed word files
+models/                      Local speech models downloaded during setup (gitignored)
 ```
 
 ## Ralph Loop Quality Flow
@@ -42,7 +43,16 @@ Analogy: unit tests are like checking a door key. The failure model is like chec
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies and the local SenseVoice model used for Cantonese speech-to-text:
+
+```bash
+npm install
+npm run setup:sensevoice
+```
+
+The model is downloaded locally under `models/sensevoice/` and is not committed to Git. The Cantonese speaking mode records a short WAV turn in the browser and sends it to `/api/speaking/stt`, where SenseVoice runs locally on the Next.js server process.
+
+Then run the development server:
 
 ```bash
 npm run dev

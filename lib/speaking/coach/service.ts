@@ -16,7 +16,8 @@ export async function createCoachResponse(
     return { error: "Missing utterance.", status: 400 };
   }
 
-  const messages = buildCoachMessages(utterance, payload.history);
+  const language = payload.language === "cantonese" ? "cantonese" : "english";
+  const messages = buildCoachMessages(utterance, payload.history, language);
   const provider = (env.AI_PROVIDER ?? "openai").toLowerCase();
   const modelResponse =
     provider === "cloudflare"
@@ -30,6 +31,8 @@ export async function createCoachResponse(
   return {
     corrected: utterance,
     feedback: normalizeFeedback(undefined),
-    coachReply: extractCoachReply(modelResponse.content) || "Nice try. Can you tell me more?",
+    coachReply:
+      extractCoachReply(modelResponse.content) ||
+      (language === "cantonese" ? "講得幾好，你可以再講多少少嗎？" : "Nice try. Can you tell me more?"),
   };
 }

@@ -11,6 +11,12 @@ body {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 16% 14%, rgba(34, 211, 238, 0.2), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(244, 114, 182, 0.16), transparent 26%),
+    linear-gradient(135deg, #07111f 0%, #0b1020 48%, #111827 100%);
+  color: #e5f6ff;
 }
 
 * {
@@ -106,8 +112,11 @@ a {
     outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
   }
   body {
-    background: var(--background);
-    color: var(--foreground);
+    background:
+      radial-gradient(circle at 16% 14%, rgba(34, 211, 238, 0.2), transparent 30%),
+      radial-gradient(circle at 82% 18%, rgba(244, 114, 182, 0.16), transparent 26%),
+      linear-gradient(135deg, #07111f 0%, #0b1020 48%, #111827 100%);
+    color: #e5f6ff;
   }
   html {
     font-family: var(--font-sans, Arial, Helvetica, sans-serif);

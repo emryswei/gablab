@@ -1,0 +1,92 @@
+.page {
+  width: min(100% - 32px, 1040px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 34px 0 46px;
+  color: #e5f6ff;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.backButton {
+  border-color: rgba(103, 232, 249, 0.28);
+  color: #dff8ff;
+  background: rgba(8, 13, 26, 0.62);
+}
+
+.backButton:hover {
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.pageTitle {
+  text-align: right;
+}
+
+.pageTitle p {
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 820;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.pageTitle h1 {
+  color: #f8fbff;
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 840;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.practiceShell {
+  position: relative;
+  overflow: hidden;
+  min-height: 620px;
+  padding: clamp(20px, 4vw, 38px);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 13, 26, 0.92), rgba(15, 23, 42, 0.74)),
+    radial-gradient(circle at 22% 28%, rgba(34, 211, 238, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 24%, rgba(244, 114, 182, 0.12), transparent 30%);
+  box-shadow: 0 34px 96px rgba(0, 0, 0, 0.34);
+}
+
+.practiceShell::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(125, 249, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 249, 255, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.55;
+  content: "";
+}
+
+.practiceShell > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: min(100% - 24px, 1040px);
+    padding: 24px 0 34px;
+  }
+
+  .topBar {
+    align-items: flex-start;
+  }
+
+  .practiceShell {
+    min-height: 560px;
+  }
+}
