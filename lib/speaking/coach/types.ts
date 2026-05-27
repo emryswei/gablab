@@ -21,14 +21,19 @@ export type CompletionResponse = {
 };
 
 export type ParsedCoach = {
-  corrected?: string;
-  feedback?: string | string[];
+  reply?: string;
+  corrected?: string | null;
+  feedback?: string | string[] | null;
+  followUpQuestion?: string | null;
   coachReply?: string;
 };
 
 export type CoachSuccess = {
-  corrected: string;
-  feedback: string;
+  reply: string;
+  corrected?: string;
+  feedback?: string;
+  followUpQuestion?: string;
+  /** Compatibility field for clients that speak or render one combined response. */
   coachReply: string;
 };
 

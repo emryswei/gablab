@@ -177,6 +177,7 @@
 }
 
 .replyPanel,
+.coachingPanel,
 .transcriptPanel {
   position: relative;
   overflow: hidden;
@@ -188,6 +189,7 @@
 }
 
 .replyPanel::before,
+.coachingPanel::before,
 .transcriptPanel::before {
   position: absolute;
   inset: 0 auto 0 0;
@@ -198,6 +200,7 @@
 }
 
 .replyPanel p,
+.coachingPanel p,
 .transcriptPanel p {
   position: relative;
   margin: 0;
@@ -210,6 +213,28 @@
 .replyPanel p {
   color: #d7e8f8;
   line-height: 1.58;
+}
+
+.followUpQuestion {
+  margin-top: 10px !important;
+}
+
+.coachingPanel::before {
+  background: #f472b6;
+  box-shadow: 0 0 18px rgba(244, 114, 182, 0.52);
+}
+
+.coachingPanel p {
+  color: #d7e8f8;
+  line-height: 1.52;
+}
+
+.coachingPanel p + p {
+  margin-top: 10px;
+}
+
+.coachingPanel strong {
+  color: #f9a8d4;
 }
 
 .panelLabel {

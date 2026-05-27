@@ -23,18 +23,25 @@ export function parseCoachContent(rawContent: string): ParsedCoach | null {
 
 export function normalizeFeedback(feedback: ParsedCoach["feedback"]) {
   if (Array.isArray(feedback)) {
-    return feedback.filter(Boolean).join(" ");
+    return feedback.map((item) => item.trim()).filter(Boolean).join(" ") || undefined;
   }
   if (typeof feedback === "string") {
-    return feedback;
+    return feedback.trim() || undefined;
   }
-  return "Good effort. Keep sentences short and clear.";
+  return undefined;
+}
+
+export function normalizeOptionalText(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 export function extractCoachReply(rawContent: string) {
   const trimmed = rawContent.trim();
 
   const parsed = parseCoachContent(trimmed);
+  if (parsed?.reply && typeof parsed.reply === "string") {
+    return parsed.reply.trim();
+  }
   if (parsed?.coachReply && typeof parsed.coachReply === "string") {
     return parsed.coachReply.trim();
   }
@@ -42,6 +49,9 @@ export function extractCoachReply(rawContent: string) {
   const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fenceMatch?.[1]) {
     const parsedFence = parseCoachContent(fenceMatch[1].trim());
+    if (parsedFence?.reply && typeof parsedFence.reply === "string") {
+      return parsedFence.reply.trim();
+    }
     if (parsedFence?.coachReply && typeof parsedFence.coachReply === "string") {
       return parsedFence.coachReply.trim();
     }

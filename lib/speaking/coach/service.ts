@@ -1,6 +1,6 @@
 import { buildCoachMessages } from "./messages.ts";
 import { requestCloudflare, requestOpenAI } from "./providers.ts";
-import { extractCoachReply, normalizeFeedback } from "./response-parser.ts";
+import { extractCoachReply, normalizeFeedback, normalizeOptionalText, parseCoachContent } from "./response-parser.ts";
 import type { CoachFailure, CoachPayload, CoachSuccess } from "./types.ts";
 import type { CoachProviderEnv } from "./providers.ts";
 
@@ -28,11 +28,20 @@ export async function createCoachResponse(
     return modelResponse;
   }
 
+  const parsed = parseCoachContent(modelResponse.content);
+  const reply =
+    extractCoachReply(modelResponse.content) ||
+    (language === "cantonese" ? "講得幾好，你可以再講多少少。" : "Nice try. Tell me more.");
+  const corrected = normalizeOptionalText(parsed?.corrected);
+  const feedback = normalizeFeedback(parsed?.feedback);
+  const followUpQuestion = normalizeOptionalText(parsed?.followUpQuestion);
+  const coachReply = followUpQuestion && !reply.includes(followUpQuestion) ? `${reply} ${followUpQuestion}` : reply;
+
   return {
-    corrected: utterance,
-    feedback: normalizeFeedback(undefined),
-    coachReply:
-      extractCoachReply(modelResponse.content) ||
-      (language === "cantonese" ? "講得幾好，你可以再講多少少嗎？" : "Nice try. Can you tell me more?"),
+    reply,
+    ...(corrected && corrected !== utterance ? { corrected } : {}),
+    ...(feedback ? { feedback } : {}),
+    ...(followUpQuestion ? { followUpQuestion } : {}),
+    coachReply,
   };
 }

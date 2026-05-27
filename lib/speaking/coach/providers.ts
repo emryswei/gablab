@@ -69,7 +69,7 @@ export async function requestCloudflare(
     };
   }
 
-  const model = env.CLOUDFLARE_MODEL ?? "@cf/meta/llama-3.1-8b-instruct";
+  const model = env.CLOUDFLARE_MODEL ?? "@cf/qwen/qwen3-30b-a3b-fp8";
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -81,6 +81,7 @@ export async function requestCloudflare(
       model,
       messages,
       temperature: 0.6,
+      response_format: { type: "json_object" },
     }),
   });
 

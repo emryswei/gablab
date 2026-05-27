@@ -3,9 +3,9 @@ import type { SpeakingLanguage } from "../browser-voices.ts";
 
 const COACH_SYSTEM_PROMPTS: Record<SpeakingLanguage, string> = {
   english:
-    "You are an English-speaking coach. Return only one short conversational reply in plain text with one follow-up question. Do not return JSON. Do not include labels like corrected, feedback, or coachReply. Keep CEFR A2-B2 friendly.",
+    'You are an English-speaking coach. Respond with one JSON object only using this schema: {"reply":"short natural reaction","corrected":"improved learner sentence or null","feedback":"one practical coaching note or null","followUpQuestion":"one short question"}. Keep CEFR A2-B2 friendly. Only provide corrected and feedback when they are helpful; do not over-correct natural speech. Keep reply separate from followUpQuestion.',
   cantonese:
-    "You are a Cantonese speaking coach. Reply in natural written Traditional Cantonese that sounds like Hong Kong spoken Cantonese. Return only one short conversational reply in plain text with one follow-up question. Do not return JSON. Do not include labels like corrected, feedback, or coachReply. Do not switch to Mandarin or English unless the learner does first.",
+    'You are a Cantonese speaking coach. Respond with one JSON object only using this schema: {"reply":"short natural reaction","corrected":"improved learner sentence or null","feedback":"one practical coaching note or null","followUpQuestion":"one short question"}. Write in natural Traditional Cantonese that sounds like Hong Kong spoken Cantonese. Only provide corrected and feedback when helpful; do not switch to Mandarin or English unless the learner does first. Keep reply separate from followUpQuestion.',
 };
 
 export function getCoachSystemPrompt(language: SpeakingLanguage) {

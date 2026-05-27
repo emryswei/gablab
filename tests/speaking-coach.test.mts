@@ -5,6 +5,7 @@ import { extractCoachReply } from "../lib/speaking/coach/response-parser.ts";
 import { createCoachResponse } from "../lib/speaking/coach/service.ts";
 
 test("extractCoachReply accepts JSON, fenced JSON, labels, and plain text", () => {
+  assert.equal(extractCoachReply('{"reply":"That sounds interesting."}'), "That sounds interesting.");
   assert.equal(extractCoachReply('{"coachReply":"Tell me more."}'), "Tell me more.");
   assert.equal(extractCoachReply('```json\n{"coachReply":"What happened next?"}\n```'), "What happened next?");
   assert.equal(extractCoachReply("Coach reply: How did you feel?"), "How did you feel?");
@@ -29,6 +30,8 @@ test("buildCoachMessages trims history and appends the current utterance", () =>
   const messages = buildCoachMessages(" I like coffee. ", [{ role: "user", content: " hello " }]);
 
   assert.equal(messages[0].role, "system");
+  assert.match(messages[0].content, /JSON object/);
+  assert.match(messages[0].content, /followUpQuestion/);
   assert.deepEqual(messages.slice(1), [
     { role: "user", content: "hello" },
     { role: "user", content: " I like coffee. " },
@@ -53,26 +56,34 @@ test("createCoachResponse rejects missing utterance before provider call", async
   assert.deepEqual(response, { error: "Missing utterance.", status: 400 });
 });
 
-test("createCoachResponse uses OpenAI by default and normalizes coach reply", async () => {
+test("createCoachResponse uses OpenAI by default and returns structured coaching fields", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const response = await createCoachResponse(
-    { utterance: "Hello" },
+    { utterance: "I go home yesterday." },
     { OPENAI_API_KEY: "test-key" },
     async (url, init) => {
       calls.push({ url: String(url), init });
-      return Response.json({ choices: [{ message: { content: '{"coachReply":"Hi. How are you?"}' } }] });
+      return Response.json({
+        choices: [{
+          message: {
+            content: '{"reply":"Sounds like a quiet day.","corrected":"I went home yesterday.","feedback":"Use went for a completed action in the past.","followUpQuestion":"What did you do at home?"}',
+          },
+        }],
+      });
     },
   );
 
   assert.equal(calls[0]?.url, "https://api.openai.com/v1/chat/completions");
   assert.deepEqual(response, {
-    corrected: "Hello",
-    feedback: "Good effort. Keep sentences short and clear.",
-    coachReply: "Hi. How are you?",
+    reply: "Sounds like a quiet day.",
+    corrected: "I went home yesterday.",
+    feedback: "Use went for a completed action in the past.",
+    followUpQuestion: "What did you do at home?",
+    coachReply: "Sounds like a quiet day. What did you do at home?",
   });
 });
 
-test("createCoachResponse can route to Cloudflare provider", async () => {
+test("createCoachResponse uses Qwen on Cloudflare and omits unneeded correction fields", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const response = await createCoachResponse(
     { utterance: "Hello" },
@@ -83,14 +94,26 @@ test("createCoachResponse can route to Cloudflare provider", async () => {
     },
     async (url, init) => {
       calls.push({ url: String(url), init });
-      return Response.json({ choices: [{ message: { content: "Coach reply: Nice. What did you do today?" } }] });
+      return Response.json({
+        choices: [{
+          message: {
+            content: '{"reply":"Nice.","corrected":null,"feedback":null,"followUpQuestion":"What did you do today?"}',
+          },
+        }],
+      });
     },
   );
 
   assert.equal(calls[0]?.url, "https://api.cloudflare.com/client/v4/accounts/account/ai/v1/chat/completions");
+  const requestBody = JSON.parse(String(calls[0]?.init?.body)) as {
+    model: string;
+    response_format: { type: string };
+  };
+  assert.equal(requestBody.model, "@cf/qwen/qwen3-30b-a3b-fp8");
+  assert.deepEqual(requestBody.response_format, { type: "json_object" });
   assert.deepEqual(response, {
-    corrected: "Hello",
-    feedback: "Good effort. Keep sentences short and clear.",
+    reply: "Nice.",
+    followUpQuestion: "What did you do today?",
     coachReply: "Nice. What did you do today?",
   });
 });
@@ -103,14 +126,22 @@ test("createCoachResponse forwards Cantonese conversation instructions", async (
     async (_url, init) => {
       const body = JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content: string }> };
       sentMessages = body.messages;
-      return Response.json({ choices: [{ message: { content: "幾好喎，你食咗啲咩？" } }] });
+      return Response.json({
+        choices: [{
+          message: {
+            content: '{"reply":"幾好喎。","corrected":null,"feedback":null,"followUpQuestion":"你食咗啲咩？"}',
+          },
+        }],
+      });
     },
   );
 
   assert.match(sentMessages[0].content, /Traditional Cantonese/);
   assert.equal("error" in response, false);
   if (!("error" in response)) {
-    assert.equal(response.coachReply, "幾好喎，你食咗啲咩？");
+    assert.equal(response.reply, "幾好喎。");
+    assert.equal(response.followUpQuestion, "你食咗啲咩？");
+    assert.equal(response.coachReply, "幾好喎。 你食咗啲咩？");
   }
 });
 

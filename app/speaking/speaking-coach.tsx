@@ -18,7 +18,11 @@ import { useMicVisualizer } from "./use-mic-visualizer";
 import { useSenseVoiceStt } from "./use-sensevoice-stt";
 
 type CoachResponse = {
-  coachReply: string;
+  reply?: string;
+  corrected?: string;
+  feedback?: string;
+  followUpQuestion?: string;
+  coachReply?: string;
 };
 
 type ChatTurn = {
@@ -67,6 +71,9 @@ const LANGUAGE_COPY = {
     goodbye: "Okay, bye. Talk to you next time.",
     noResponse: "No response detected. Conversation ended.",
     assistantLabel: "AI reply:",
+    correctionLabel: "Try saying",
+    feedbackLabel: "Coach tip",
+    followUpLabel: "Next question",
     userLabel: "You said",
   },
   cantonese: {
@@ -75,6 +82,9 @@ const LANGUAGE_COPY = {
     goodbye: "好啦，拜拜，下次再傾。",
     noResponse: "未收到回應，對話已結束。",
     assistantLabel: "AI 回覆：",
+    correctionLabel: "可以咁講",
+    feedbackLabel: "練習提示",
+    followUpLabel: "下一題",
     userLabel: "你講咗",
   },
 } as const;
@@ -107,13 +117,16 @@ export default function SpeakingCoach() {
   const [interim, setInterim] = useState("");
   const [lastUserUtterance, setLastUserUtterance] = useState("");
   const [coachReply, setCoachReply] = useState<string | null>(null);
+  const [corrected, setCorrected] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [followUpQuestion, setFollowUpQuestion] = useState<string | null>(null);
   const [history, setHistory] = useState<ChatTurn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedAccent, setSelectedAccent] = useState<EnglishAccent>("en-GB");
   const [selectedCantoneseVoice, setSelectedCantoneseVoice] = useState<CantoneseVoice>("Tracy");
   const [selectedLanguage, setSelectedLanguage] = useState<SpeakingLanguage>("english");
   const displayedUserUtterance = `${transcript} ${interim}`.trim() || lastUserUtterance;
-  const hasTextPanelContent = Boolean(coachReply || displayedUserUtterance || error);
+  const hasTextPanelContent = Boolean(coachReply || corrected || feedback || followUpQuestion || displayedUserUtterance || error);
   const copy = LANGUAGE_COPY[selectedLanguage];
   const { availableAccentLangs, browserVoicesRef } = useBrowserVoices();
   const {
@@ -244,11 +257,12 @@ export default function SpeakingCoach() {
         throw new Error(payload.error ?? "Failed to get AI coach response.");
       }
 
-      const parsed: CoachResponse = {
-        coachReply:
-          payload.coachReply ??
-          (requestLanguage === "cantonese" ? "你今日過成點呀？" : "Tell me more about your day."),
-      };
+      const reply =
+        payload.reply?.trim() ||
+        payload.coachReply?.trim() ||
+        (requestLanguage === "cantonese" ? "你今日過成點呀？" : "Tell me more about your day.");
+      const question = payload.followUpQuestion?.trim() || null;
+      const spokenReply = payload.coachReply?.trim() || `${reply} ${question ?? ""}`.trim();
 
       if (!conversationActiveRef.current || requestSession !== conversationSessionRef.current) {
         return;
@@ -257,13 +271,16 @@ export default function SpeakingCoach() {
       const updatedHistory = [
         ...historyRef.current,
         { role: "user" as const, content: utterance },
-        { role: "assistant" as const, content: parsed.coachReply },
+        { role: "assistant" as const, content: spokenReply },
       ];
       historyRef.current = updatedHistory;
       setHistory(updatedHistory);
-      setCoachReply(parsed.coachReply);
+      setCoachReply(reply);
+      setCorrected(payload.corrected?.trim() || null);
+      setFeedback(payload.feedback?.trim() || null);
+      setFollowUpQuestion(question);
 
-      speakOutLoud(parsed.coachReply, () => {
+      speakOutLoud(spokenReply, () => {
         if (conversationActiveRef.current && requestSession === conversationSessionRef.current) {
           void startListeningTurn("normal");
         }
@@ -471,6 +488,9 @@ export default function SpeakingCoach() {
     setError(null);
     setIsLoading(false);
     setCoachReply(null);
+    setCorrected(null);
+    setFeedback(null);
+    setFollowUpQuestion(null);
     setLastUserUtterance("");
     setHistory([]);
     historyRef.current = [];
@@ -592,6 +612,26 @@ export default function SpeakingCoach() {
               <p>
                 <strong>{copy.assistantLabel}</strong> {coachReply}
               </p>
+              {followUpQuestion ? (
+                <p className={styles.followUpQuestion}>
+                  <strong>{copy.followUpLabel}:</strong> {followUpQuestion}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {corrected || feedback ? (
+            <div className={styles.coachingPanel}>
+              {corrected ? (
+                <p>
+                  <strong>{copy.correctionLabel}:</strong> {corrected}
+                </p>
+              ) : null}
+              {feedback ? (
+                <p>
+                  <strong>{copy.feedbackLabel}:</strong> {feedback}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
