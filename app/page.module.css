@@ -52,6 +52,173 @@
   line-height: 1.55;
 }
 
+.dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.progressCard,
+.lessonCard,
+.dataCard {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(8, 13, 26, 0.78);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+}
+
+.dataCard {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: rgba(8, 13, 26, 0.58);
+}
+
+.dataCard h2 {
+  margin-top: 5px;
+  color: #f8fbff;
+  font-size: 18px;
+}
+
+.dataCard p {
+  margin-top: 6px;
+  color: #8ea6bc;
+  font-size: 13px;
+}
+
+.dataActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dataActions button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 7px;
+  color: #c4d5e8;
+  background: rgba(15, 23, 42, 0.74);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 730;
+  cursor: pointer;
+}
+
+.dataActions button:focus-visible {
+  outline: 3px solid rgba(34, 211, 238, 0.28);
+  outline-offset: 2px;
+}
+
+.dataActions .deleteButtonConfirm {
+  border-color: rgba(251, 113, 133, 0.55);
+  color: #fecdd3;
+  background: rgba(159, 18, 57, 0.2);
+}
+
+.dataNotice {
+  grid-column: 1 / -1;
+  color: #a7f3d0 !important;
+  font-weight: 700;
+}
+
+.cardEyebrow,
+.lessonHeader {
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.progressCard h2,
+.lessonCard h2 {
+  margin-top: 5px;
+  color: #f8fbff;
+  font-size: 24px;
+}
+
+.cardText,
+.lessonCard > p {
+  margin-top: 8px;
+  color: #abc2d9;
+  line-height: 1.5;
+}
+
+.progressTrack {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22d3ee, #f472b6);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.4);
+}
+
+.progressMeta,
+.lessonMeta,
+.lessonHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+}
+
+.progressMeta span,
+.lessonMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #b6c7d8;
+  font-size: 13px;
+}
+
+.storageWarning {
+  color: #fecdd3;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.lessonCard {
+  border-color: rgba(103, 232, 249, 0.3);
+  background:
+    linear-gradient(135deg, rgba(8, 13, 26, 0.92), rgba(15, 23, 42, 0.82)),
+    radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.16), transparent 36%);
+}
+
+.lessonAction {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 7px;
+  color: #07111f;
+  background: #67e8f9;
+  font-weight: 820;
+}
+
+.lessonAction:focus-visible {
+  outline: 3px solid rgba(244, 114, 182, 0.52);
+  outline-offset: 3px;
+}
+
 .modeGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -326,8 +493,19 @@
 }
 
 @media (max-width: 880px) {
+  .dashboard,
   .modeGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .dataCard {
+    grid-template-columns: 1fr;
+  }
+
+  .dataActions {
+    justify-content: flex-start;
   }
 }
 

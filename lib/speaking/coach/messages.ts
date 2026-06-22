@@ -1,5 +1,6 @@
 import type { ChatTurn, OpenAIMessage } from "./types.ts";
 import type { SpeakingLanguage } from "../browser-voices.ts";
+import type { LessonDefinition } from "../../learning/types.ts";
 
 const COACH_SYSTEM_PROMPTS: Record<SpeakingLanguage, string> = {
   english:
@@ -31,11 +32,17 @@ export function buildCoachMessages(
   utterance: string,
   history: unknown,
   language: SpeakingLanguage = "english",
+  lesson?: LessonDefinition,
 ): OpenAIMessage[] {
+  const lessonContext = lesson
+    ? `\n\nCurrent lesson: ${lesson.title}. Learning goal: ${lesson.summary} Checkpoints: ${lesson.checkpoints
+        .map((checkpoint) => `${checkpoint.title} (${checkpoint.promptGoal})`)
+        .join("; ")}. Ask adaptive follow-up questions that move through these checkpoints naturally.`
+    : "";
   return [
     {
       role: "system",
-      content: getCoachSystemPrompt(language),
+      content: `${getCoachSystemPrompt(language)}${lessonContext}`,
     },
     ...getRecentHistory(history).map((turn) => ({
       role: turn.role,

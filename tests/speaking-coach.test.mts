@@ -45,6 +45,20 @@ test("buildCoachMessages requests Traditional Cantonese replies for Cantonese mo
   assert.match(messages[0].content, /Hong Kong spoken Cantonese/);
 });
 
+test("buildCoachMessages includes structured lesson checkpoints", async () => {
+  const { INTRODUCING_YOURSELF_LESSON } = await import("../lib/learning/courses.ts");
+  const messages = buildCoachMessages(
+    "I work in an office.",
+    [],
+    "english",
+    INTRODUCING_YOURSELF_LESSON,
+  );
+
+  assert.match(messages[0].content, /Introducing Yourself and Daily Life/);
+  assert.match(messages[0].content, /Typical day/);
+  assert.match(messages[0].content, /adaptive follow-up questions/);
+});
+
 test("createCoachResponse rejects missing utterance before provider call", async () => {
   let called = false;
   const response = await createCoachResponse({}, {}, async () => {
@@ -142,6 +156,37 @@ test("createCoachResponse forwards Cantonese conversation instructions", async (
     assert.equal(response.reply, "幾好喎。");
     assert.equal(response.followUpQuestion, "你食咗啲咩？");
     assert.equal(response.coachReply, "幾好喎。 你食咗啲咩？");
+  }
+});
+
+test("createCoachResponse skips to another checkpoint without returning correction feedback", async () => {
+  let finalUserMessage = "";
+  const response = await createCoachResponse(
+    {
+      lessonId: "introducing-yourself-and-daily-life",
+      language: "english",
+      skipQuestion: true,
+    },
+    { OPENAI_API_KEY: "test-key" },
+    async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content: string }> };
+      finalUserMessage = body.messages.at(-1)?.content ?? "";
+      return Response.json({
+        choices: [{
+          message: {
+            content: '{"reply":"No problem.","corrected":"Incorrect synthetic correction.","feedback":"Synthetic feedback.","followUpQuestion":"What do you enjoy doing after work?"}',
+          },
+        }],
+      });
+    },
+  );
+
+  assert.match(finalUserMessage, /skip this question/);
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.corrected, undefined);
+    assert.equal(response.feedback, undefined);
+    assert.equal(response.followUpQuestion, "What do you enjoy doing after work?");
   }
 });
 

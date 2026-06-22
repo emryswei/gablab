@@ -1,6 +1,7 @@
 import { ArrowRight, BookOpenText, Mic2 } from "lucide-react";
 import Link from "next/link";
 
+import LearningDashboard from "./learning-dashboard";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +32,11 @@ export default function Home() {
         <p className={styles.eyebrow}>Language practice workspace</p>
         <h1>GabLab</h1>
         <p className={styles.subhead}>
-          Pick a neural practice mode: speak with a live coach, or drill words through a focused review deck.
+          Build a consistent English speaking habit with guided practice and focused review.
         </p>
       </header>
+
+      <LearningDashboard />
 
       <section className={styles.modeGrid} aria-label="Practice modes">
         {modes.map((mode) => {

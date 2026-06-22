@@ -9,6 +9,8 @@ export type CoachPayload = {
   utterance?: string;
   history?: ChatTurn[];
   language?: SpeakingLanguage;
+  lessonId?: string;
+  skipQuestion?: boolean;
 };
 
 export type OpenAIMessage = {

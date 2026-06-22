@@ -1,5 +1,7 @@
 "use client";
 
+import { Pause, Play, SkipForward, Square, Volume2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   CANTONESE_LOCALE,
@@ -8,6 +10,30 @@ import {
   type EnglishAccent,
   type SpeakingLanguage,
 } from "@/lib/speaking/browser-voices";
+import { getLessonById } from "@/lib/learning/courses";
+import {
+  appendSessionTurn,
+  createPracticeSession,
+  endPracticeSession,
+  pausePracticeSession,
+  resumePracticeSession,
+} from "@/lib/learning/session";
+import {
+  DEFAULT_LEARNING_SETTINGS,
+  hasCurrentPrivacyConsent,
+  IndexedDbLearningRepository,
+  loadLearningSettings,
+  saveLearningSettings,
+} from "@/lib/learning/storage";
+import {
+  PRIVACY_CONSENT_VERSION,
+  LEARNING_SCHEMA_VERSION,
+  type LearningSettings,
+  type PracticeReport,
+  type PracticeSession,
+  type SessionStatus,
+} from "@/lib/learning/types";
+import { Button } from "@/components/ui/button";
 import AccentSelector from "./accent-selector";
 import CantoneseVoiceSelector from "./cantonese-voice-selector";
 import LanguageSelector from "./language-selector";
@@ -108,6 +134,8 @@ export default function SpeakingCoach() {
   const selectedVoiceLocaleRef = useRef<AssistantVoiceLocale>("en-GB");
   const selectedCantoneseVoiceRef = useRef<CantoneseVoice>("Tracy");
   const conversationSessionRef = useRef(0);
+  const learningSessionRef = useRef<PracticeSession | null>(null);
+  const learningRepositoryRef = useRef<IndexedDbLearningRepository | null>(null);
 
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
   const [isAudioCaptureSupported, setIsAudioCaptureSupported] = useState(false);
@@ -125,7 +153,21 @@ export default function SpeakingCoach() {
   const [selectedAccent, setSelectedAccent] = useState<EnglishAccent>("en-GB");
   const [selectedCantoneseVoice, setSelectedCantoneseVoice] = useState<CantoneseVoice>("Tracy");
   const [selectedLanguage, setSelectedLanguage] = useState<SpeakingLanguage>("english");
+  const [lessonId, setLessonId] = useState<string | undefined>();
+  const [requestedSessionId, setRequestedSessionId] = useState<string | undefined>();
+  const [routeContextReady, setRouteContextReady] = useState(false);
+  const [learningSessionReady, setLearningSessionReady] = useState(false);
+  const [practiceStatus, setPracticeStatus] = useState<SessionStatus | null>(null);
+  const [storageAvailable, setStorageAvailable] = useState(true);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const [practiceReport, setPracticeReport] = useState<PracticeReport | null>(null);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [settingsReady, setSettingsReady] = useState(false);
+  const [learningSettings, setLearningSettings] = useState<LearningSettings>(DEFAULT_LEARNING_SETTINGS);
+  const [learnerName, setLearnerName] = useState("");
+  const [englishGoal, setEnglishGoal] = useState("");
   const displayedUserUtterance = `${transcript} ${interim}`.trim() || lastUserUtterance;
+  const lesson = lessonId ? getLessonById(lessonId) : undefined;
   const hasTextPanelContent = Boolean(coachReply || corrected || feedback || followUpQuestion || displayedUserUtterance || error);
   const copy = LANGUAGE_COPY[selectedLanguage];
   const { availableAccentLangs, browserVoicesRef } = useBrowserVoices();
@@ -152,9 +194,92 @@ export default function SpeakingCoach() {
 
   useEffect(() => {
     const speechWindow = window as WindowWithSpeechRecognition;
+    const searchParams = new URLSearchParams(window.location.search);
+    setLessonId(searchParams.get("lesson") ?? undefined);
+    setRequestedSessionId(searchParams.get("session") ?? undefined);
+    setRouteContextReady(true);
+    const settings = loadLearningSettings();
+    setLearningSettings(settings);
+    const repository = new IndexedDbLearningRepository();
+    learningRepositoryRef.current = repository;
+    void repository.getProfile().then((profile) => {
+      setLearnerName(profile?.learnerName ?? "");
+      setEnglishGoal(profile?.englishGoal ?? "");
+    }).catch(() => setStorageAvailable(false));
+    setSettingsReady(true);
     setIsSpeechRecognitionSupported(Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition));
     setIsAudioCaptureSupported(typeof navigator.mediaDevices?.getUserMedia === "function");
   }, []);
+
+  useEffect(() => {
+    if (!routeContextReady || !settingsReady) return;
+    if (!lesson) {
+      setLearningSessionReady(true);
+      return;
+    }
+    if (!hasCurrentPrivacyConsent(learningSettings)) {
+      setLearningSessionReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    const repository = new IndexedDbLearningRepository();
+    learningRepositoryRef.current = repository;
+
+    const initializeLearningSession = async () => {
+      try {
+        const storedSession = requestedSessionId
+          ? await repository.getSession(requestedSessionId)
+          : undefined;
+        const canResume =
+          storedSession &&
+          storedSession.lessonId === lesson.id &&
+          storedSession.status !== "completed";
+        const session = canResume
+          ? pausePracticeSession(storedSession)
+          : pausePracticeSession(
+              createPracticeSession({
+                id: crypto.randomUUID(),
+                lesson,
+                mode: "standard",
+                modelId: "configured-coach-model",
+              }),
+            );
+        await repository.saveSession(session);
+        if (cancelled) return;
+
+        learningSessionRef.current = session;
+        const restoredHistory = session.turns.map((turn) => ({
+          role: turn.role,
+          content: turn.content,
+        }));
+        historyRef.current = restoredHistory;
+        setHistory(restoredHistory);
+        setPracticeStatus(session.status);
+        setPracticeReport(session.report ?? null);
+      } catch {
+        if (cancelled) return;
+        const session = pausePracticeSession(
+          createPracticeSession({
+            id: crypto.randomUUID(),
+            lesson,
+            mode: "standard",
+            modelId: "configured-coach-model",
+          }),
+        );
+        learningSessionRef.current = session;
+        setPracticeStatus(session.status);
+        setStorageAvailable(false);
+      } finally {
+        if (!cancelled) setLearningSessionReady(true);
+      }
+    };
+
+    void initializeLearningSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [learningSettings, lesson, requestedSessionId, routeContextReady, settingsReady]);
 
   useEffect(() => {
     historyRef.current = history;
@@ -234,8 +359,16 @@ export default function SpeakingCoach() {
     setIsListening(false);
   };
 
-  const sendToCoach = async (utterance: string) => {
-    if (!utterance.trim() || !conversationActiveRef.current) return;
+  const checkpointLearningSession = (session: PracticeSession) => {
+    learningSessionRef.current = session;
+    setPracticeStatus(session.status);
+    const repository = learningRepositoryRef.current;
+    if (!repository) return;
+    void repository.saveSession(session).catch(() => setStorageAvailable(false));
+  };
+
+  const sendToCoach = async (utterance: string, { skipQuestion = false } = {}) => {
+    if ((!utterance.trim() && !skipQuestion) || !conversationActiveRef.current) return;
     const requestSession = conversationSessionRef.current;
     const requestLanguage = selectedLanguageRef.current;
     setIsLoading(true);
@@ -249,6 +382,8 @@ export default function SpeakingCoach() {
           utterance,
           history: historyRef.current.slice(-8),
           language: requestLanguage,
+          lessonId,
+          skipQuestion,
         }),
       });
 
@@ -270,7 +405,7 @@ export default function SpeakingCoach() {
 
       const updatedHistory = [
         ...historyRef.current,
-        { role: "user" as const, content: utterance },
+        ...(skipQuestion ? [] : [{ role: "user" as const, content: utterance }]),
         { role: "assistant" as const, content: spokenReply },
       ];
       historyRef.current = updatedHistory;
@@ -279,6 +414,27 @@ export default function SpeakingCoach() {
       setCorrected(payload.corrected?.trim() || null);
       setFeedback(payload.feedback?.trim() || null);
       setFollowUpQuestion(question);
+
+      if (lesson && learningSessionRef.current) {
+        const now = new Date();
+        const sessionWithUserTurn = skipQuestion
+          ? learningSessionRef.current
+          : appendSessionTurn(learningSessionRef.current, {
+              id: crypto.randomUUID(),
+              role: "user",
+              content: utterance,
+              createdAt: now.toISOString(),
+              ...(payload.corrected ? { corrected: payload.corrected } : {}),
+              ...(payload.feedback ? { feedback: payload.feedback } : {}),
+            }, now);
+        const assistantTurn = appendSessionTurn(sessionWithUserTurn, {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: spokenReply,
+          createdAt: now.toISOString(),
+        }, now);
+        checkpointLearningSession(assistantTurn);
+      }
 
       speakOutLoud(spokenReply, () => {
         if (conversationActiveRef.current && requestSession === conversationSessionRef.current) {
@@ -485,6 +641,10 @@ export default function SpeakingCoach() {
     if (!canCaptureLanguage) return;
     const session = conversationSessionRef.current + 1;
     conversationSessionRef.current = session;
+    const learningSession = learningSessionRef.current;
+    if (lesson && learningSession && learningSession.status !== "in_progress") {
+      checkpointLearningSession(resumePracticeSession(learningSession));
+    }
     setError(null);
     setIsLoading(false);
     setCoachReply(null);
@@ -492,8 +652,11 @@ export default function SpeakingCoach() {
     setFeedback(null);
     setFollowUpQuestion(null);
     setLastUserUtterance("");
-    setHistory([]);
-    historyRef.current = [];
+    const restoredHistory = lesson && learningSessionRef.current
+      ? learningSessionRef.current.turns.map((turn) => ({ role: turn.role, content: turn.content }))
+      : [];
+    setHistory(restoredHistory);
+    historyRef.current = restoredHistory;
     resetTurnBuffers();
     conversationActiveRef.current = true;
     stopRecognition();
@@ -541,17 +704,113 @@ export default function SpeakingCoach() {
     stopRecognition();
     stopAssistantSpeech();
     setIsLoading(false);
-    if (message) {
+    if (lesson && learningSessionRef.current) {
+      const endedSession = endPracticeSession(learningSessionRef.current, lesson);
+      checkpointLearningSession(endedSession);
+      void requestLessonReport(endedSession);
+      setSessionNotice(
+        endedSession.status === "completed"
+          ? "Lesson completed and saved."
+          : "Lesson saved as incomplete. You can continue it from the dashboard.",
+      );
+    } else if (message) {
       setError(message);
     }
   };
 
+  const requestLessonReport = async (session: PracticeSession) => {
+    setIsReportLoading(true);
+    try {
+      const response = await fetch("/api/speaking/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session }),
+      });
+      const payload = (await response.json()) as PracticeReport & { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Unable to generate lesson report.");
+      const sessionWithReport = { ...session, report: payload };
+      checkpointLearningSession(sessionWithReport);
+      setPracticeReport(payload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to generate lesson report.");
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
+
+  const pauseLesson = () => {
+    if (!lesson || !learningSessionRef.current || practiceStatus !== "in_progress") return;
+    conversationActiveRef.current = false;
+    conversationSessionRef.current += 1;
+    stopRecognition();
+    stopAssistantSpeech();
+    setIsLoading(false);
+    checkpointLearningSession(pausePracticeSession(learningSessionRef.current));
+    setSessionNotice("Lesson paused and saved.");
+  };
+
+  const resumeLesson = () => {
+    if (!lesson || !learningSessionRef.current || practiceStatus === "completed") return;
+    if (!isSpeechRecognitionSupported) {
+      setError("This browser does not support English SpeechRecognition. Use Chrome or Edge.");
+      return;
+    }
+    const resumedSession = resumePracticeSession(learningSessionRef.current);
+    checkpointLearningSession(resumedSession);
+    setSessionNotice(null);
+    conversationSessionRef.current += 1;
+    conversationActiveRef.current = true;
+    void startListeningTurn("normal");
+  };
+
+  const replayAssistantReply = () => {
+    const spokenReply = `${coachReply ?? ""} ${followUpQuestion ?? ""}`.trim();
+    if (!spokenReply || practiceStatus !== "in_progress") return;
+    stopRecognition();
+    speakOutLoud(spokenReply, () => {
+      if (conversationActiveRef.current) void startListeningTurn("normal");
+    });
+  };
+
+  const skipLessonQuestion = () => {
+    if (!lesson || practiceStatus !== "in_progress" || isLoading) return;
+    stopRecognition();
+    void sendToCoach("", { skipQuestion: true });
+  };
+
+  const acceptPrivacyConsent = async () => {
+    const settings: LearningSettings = {
+      ...learningSettings,
+      consentAcceptedAt: new Date().toISOString(),
+      consentVersion: PRIVACY_CONSENT_VERSION,
+    };
+    const profile = {
+      schemaVersion: LEARNING_SCHEMA_VERSION,
+      id: "local-profile" as const,
+      ...(learnerName.trim() ? { learnerName: learnerName.trim() } : {}),
+      ...(englishGoal.trim() ? { englishGoal: englishGoal.trim() } : {}),
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      await learningRepositoryRef.current?.saveProfile(profile);
+    } catch {
+      setStorageAvailable(false);
+    }
+    saveLearningSettings(settings);
+    setLearningSettings(settings);
+  };
+
   useEffect(() => {
-    if (isSpeechRecognitionSupported) {
+    if (
+      isSpeechRecognitionSupported &&
+      routeContextReady &&
+      learningSessionReady &&
+      (!lesson || hasCurrentPrivacyConsent(learningSettings))
+    ) {
       startConversation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSpeechRecognitionSupported]);
+  }, [isSpeechRecognitionSupported, learningSessionReady, learningSettings, routeContextReady]);
 
   useEffect(() => {
     return () => {
@@ -559,11 +818,119 @@ export default function SpeakingCoach() {
       clearSilenceTimer();
       clearNoInputTimer();
       recognitionRef.current?.stop();
+      if (learningSessionRef.current?.status === "in_progress") {
+        const pausedSession = pausePracticeSession(learningSessionRef.current);
+        learningSessionRef.current = pausedSession;
+        void learningRepositoryRef.current?.saveSession(pausedSession);
+      }
     };
   }, []);
 
+  if (lesson && settingsReady && !hasCurrentPrivacyConsent(learningSettings)) {
+    return (
+      <section className={styles.consentLayout}>
+        <div className={styles.consentPanel}>
+          <span>Before your first lesson</span>
+          <h2>How your speaking data is used</h2>
+          <ul>
+            <li>Microphone audio is used for speech recognition and is not stored by GabLab.</li>
+            <li>Your transcript and recent conversation context are sent to the configured Cloudflare AI model.</li>
+            <li>Lesson progress, reports, and transcripts are stored only in this browser.</li>
+            <li>You can export or delete all local learning data from the dashboard.</li>
+          </ul>
+          <label>
+            Preferred name <small>Optional</small>
+            <input
+              value={learnerName}
+              onChange={(event) => setLearnerName(event.target.value)}
+              maxLength={60}
+              autoComplete="name"
+            />
+          </label>
+          <label>
+            English speaking goal <small>Optional</small>
+            <input
+              value={englishGoal}
+              onChange={(event) => setEnglishGoal(event.target.value)}
+              maxLength={160}
+              placeholder="For example: speak more confidently at work"
+            />
+          </label>
+          <div className={styles.consentActions}>
+            <Button type="button" onClick={() => void acceptPrivacyConsent()}>I understand and continue</Button>
+            <Button asChild variant="outline">
+              <Link href="/">Back to dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={hasTextPanelContent ? styles.speakingLayout : styles.speakingLayoutSolo}>
+      {lesson ? (
+        <header className={styles.lessonContext}>
+          <span>
+            Week {lesson.week} · Lesson {lesson.sequence} · {lesson.level}
+          </span>
+          <strong>{lesson.title}</strong>
+          <p>{lesson.summary}</p>
+          <div className={styles.lessonControls} aria-label="Lesson controls">
+            {practiceStatus === "in_progress" ? (
+              <Button type="button" variant="outline" onClick={pauseLesson} disabled={isLoading}>
+                <Pause aria-hidden="true" /> Pause
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resumeLesson}
+                disabled={
+                  !learningSessionReady ||
+                  !isSpeechRecognitionSupported ||
+                  practiceStatus === "completed"
+                }
+              >
+                <Play aria-hidden="true" /> Continue
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={replayAssistantReply}
+              disabled={!coachReply || isLoading || practiceStatus !== "in_progress"}
+            >
+              <Volume2 aria-hidden="true" /> Replay AI
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={skipLessonQuestion}
+              disabled={isLoading || practiceStatus !== "in_progress"}
+            >
+              <SkipForward aria-hidden="true" /> Skip question
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => endConversation()}
+              disabled={
+                !learningSessionReady ||
+                (practiceStatus !== "in_progress" && practiceStatus !== "paused")
+              }
+            >
+              <Square aria-hidden="true" /> End
+            </Button>
+          </div>
+          {sessionNotice ? <p className={styles.sessionNotice} role="status">{sessionNotice}</p> : null}
+          {!storageAvailable ? (
+            <p className={styles.persistenceWarning} role="alert">
+              Local storage is unavailable. This lesson will not persist after you leave the page.
+            </p>
+          ) : null}
+        </header>
+      ) : null}
       {/* <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button type="button" onClick={startConversation} disabled={!isSupported || isLoading}>
           Restart Conversation
@@ -588,7 +955,9 @@ export default function SpeakingCoach() {
           aria-hidden="true"
         />
         <div className={styles.voiceControls}>
-          <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={handleLanguageChange} />
+          {!lesson ? (
+            <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={handleLanguageChange} />
+          ) : null}
           {selectedLanguage === "english" ? (
             <AccentSelector
               availableAccentLangs={availableAccentLangs}
@@ -644,6 +1013,51 @@ export default function SpeakingCoach() {
 
           {error ? <p className={styles.errorText}>{error}</p> : null}
         </div>
+      ) : null}
+
+      {isReportLoading ? (
+        <p className={styles.reportLoading} role="status">Generating your lesson report...</p>
+      ) : null}
+
+      {practiceReport ? (
+        <section className={styles.reportPanel} aria-labelledby="lesson-report-title">
+          <div className={styles.reportHeader}>
+            <div>
+              <span>{practiceReport.ratings ? "Standard lesson report" : "Practice summary"}</span>
+              <h2 id="lesson-report-title">Your coaching report</h2>
+            </div>
+            {practiceReport.source === "fallback" ? <small>Limited summary</small> : null}
+          </div>
+          {practiceReport.ratings ? (
+            <div className={styles.ratingGrid}>
+              {practiceReport.ratings.map((rating) => (
+                <article key={rating.dimension}>
+                  <span>{rating.dimension}</span>
+                  <strong>{rating.rating}/5</strong>
+                  <p>{rating.evidence}</p>
+                  <small>{rating.suggestion}</small>
+                </article>
+              ))}
+            </div>
+          ) : null}
+          <div className={styles.reportColumns}>
+            <div>
+              <h3>Strengths</h3>
+              <ul>{practiceReport.strengths.map((strength) => <li key={strength}>{strength}</li>)}</ul>
+            </div>
+            <div>
+              <h3>Priority improvements</h3>
+              {practiceReport.priorityErrors.length > 0 ? (
+                <ul>
+                  {practiceReport.priorityErrors.map((item) => (
+                    <li key={item.id}><strong>{item.category}:</strong> {item.suggestion}</li>
+                  ))}
+                </ul>
+              ) : <p>No priority correction was identified in this practice.</p>}
+            </div>
+          </div>
+          <div className={styles.nextGoal}><strong>Next goal:</strong> {practiceReport.nextGoal}</div>
+        </section>
       ) : null}
     </section>
   );
