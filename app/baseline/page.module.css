@@ -1,0 +1,215 @@
+.page {
+  width: min(100% - 32px, 900px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 34px 0 46px;
+  color: #e5f6ff;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+.topBar,
+.assessmentHeader,
+.consentActions,
+.assessmentActions,
+.resultActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.topBar {
+  margin-bottom: 20px;
+}
+
+.backButton {
+  border-color: rgba(103, 232, 249, 0.28);
+  color: #dff8ff;
+  background: rgba(8, 13, 26, 0.62);
+}
+
+.pageTitle {
+  text-align: right;
+}
+
+.pageTitle p,
+.assessmentHeader span,
+.promptCard > span,
+.resultPanel > div > span,
+.consentPanel > span {
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.pageTitle h1 {
+  color: #f8fbff;
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 840;
+  line-height: 1;
+}
+
+.assessmentPanel,
+.consentPanel,
+.unsupportedPanel,
+.resultPanel {
+  display: grid;
+  gap: 20px;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid rgba(103, 232, 249, 0.25);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 13, 26, 0.94), rgba(15, 23, 42, 0.82)),
+    radial-gradient(circle at 82% 12%, rgba(34, 211, 238, 0.14), transparent 34%);
+  box-shadow: 0 28px 76px rgba(0, 0, 0, 0.32);
+}
+
+.assessmentHeader h2,
+.consentPanel h2,
+.unsupportedPanel h2,
+.resultPanel h2 {
+  margin-top: 5px;
+  color: #f8fbff;
+  font-size: clamp(22px, 4vw, 30px);
+}
+
+.assessmentHeader > strong {
+  min-width: 64px;
+  color: #a3e635;
+  font-size: 20px;
+  text-align: right;
+}
+
+.promptProgress {
+  display: grid;
+  grid-template-columns: repeat(4, 42px);
+  gap: 9px;
+}
+
+.promptProgress button {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  color: #b6c7d8;
+  background: rgba(15, 23, 42, 0.72);
+  font: inherit;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.promptProgress .promptActive {
+  border-color: #67e8f9;
+  color: #07111f;
+  background: #67e8f9;
+}
+
+.promptCard,
+.transcriptBox,
+.resultFocus {
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.promptCard h3 {
+  margin-top: 6px;
+  color: #f8fbff;
+  font-size: 22px;
+}
+
+.promptCard p,
+.resultPanel p,
+.consentPanel li,
+.unsupportedPanel p {
+  margin-top: 8px;
+  color: #c4d5e8;
+  line-height: 1.55;
+}
+
+.promptCard small {
+  display: block;
+  margin-top: 10px;
+  color: #8ea6bc;
+}
+
+.transcriptBox {
+  min-height: 94px;
+  color: #d9f99d;
+  line-height: 1.55;
+}
+
+.assessmentActions,
+.consentActions,
+.resultActions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.errorText {
+  color: #fecdd3;
+  font-weight: 700;
+}
+
+.consentPanel ul,
+.resultFocus ul {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+}
+
+.resultPanel > svg {
+  color: #a3e635;
+}
+
+.resultFocus h3 {
+  margin-bottom: 8px;
+  color: #f8fbff;
+}
+
+.resultFocus li {
+  color: #c4d5e8;
+  line-height: 1.5;
+}
+
+.resultActions a,
+.resultActions button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(103, 232, 249, 0.34);
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.resultActions a {
+  display: inline-flex;
+  align-items: center;
+  color: #07111f;
+  background: #67e8f9;
+}
+
+.resultActions button {
+  color: #dff8ff;
+  background: transparent;
+}
+
+.statusText {
+  color: #67e8f9;
+}
+
+@media (max-width: 600px) {
+  .page {
+    width: min(100% - 24px, 900px);
+    padding: 24px 0 34px;
+  }
+
+  .assessmentHeader {
+    align-items: flex-start;
+  }
+}

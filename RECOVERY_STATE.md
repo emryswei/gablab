@@ -16,9 +16,10 @@
 - Added structured coach responses with correction and feedback UI.
 - Added lesson sessions, privacy consent, reports, dashboard progress, and completed-transcript cleanup.
 - Added deduplicated day 1, 3, 7, and 14 expression review at `/vocabulary/review`.
+- Added a four-prompt, 3-5 minute non-scoring speaking baseline at `/baseline`.
+- Baseline profiles store derived word metrics, focus areas, and a lesson recommendation without persisting audio or response transcripts.
 
 ## Pending Work
-- Add the 3-5 minute speaking baseline.
 - Add transient audio timing and pause metrics without storing raw audio.
 - Add the controlled transcript browser fixture and desktop end-to-end coverage.
 - Review 20 live English and Cantonese model evaluation cases.
@@ -29,6 +30,7 @@
 - TTS remains browser `speechSynthesis`; Cantonese voice can prefer installed `Danny` or `Tracy` `zh-HK` voices.
 - SenseVoice model assets are downloaded locally under `models/` and excluded from Git.
 - Language changes start a new conversation session to prevent stale responses crossing modes.
+- Speaking baseline transcripts remain in memory only; the local profile stores derived metrics and the recommended lesson ID.
 
 ## Important Files
 - `app/speaking/speaking-coach.tsx`
@@ -44,6 +46,9 @@
 - `lib/learning/storage.ts`
 - `app/vocabulary/review-queue.tsx`
 - `app/vocabulary/review/page.tsx`
+- `lib/learning/baseline.ts`
+- `app/baseline/baseline-assessment.tsx`
+- `app/baseline/page.tsx`
 - `scripts/setup-sensevoice.mjs`
 - `.env.local`
 
@@ -59,4 +64,4 @@
 - Focusing on premium voice quality now: user deferred TTS/intonation improvements in favor of smarter coaching.
 
 ## Exact Next Step
-- Add a 3-5 minute speaking baseline that produces a non-scoring starting profile and feeds the first lesson recommendation.
+- Add transient answer duration and pause metrics without storing raw audio, then include those metrics as evidence inputs for future fluency reports.

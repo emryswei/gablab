@@ -61,6 +61,7 @@
 
 .progressCard,
 .lessonCard,
+.baselineCard,
 .dataCard {
   display: grid;
   align-content: start;
@@ -71,6 +72,50 @@
   border-radius: 8px;
   background: rgba(8, 13, 26, 0.78);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+}
+
+.baselineCard {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: rgba(163, 230, 53, 0.26);
+  background:
+    linear-gradient(135deg, rgba(8, 13, 26, 0.9), rgba(20, 83, 45, 0.32)),
+    radial-gradient(circle at 82% 20%, rgba(163, 230, 53, 0.12), transparent 30%);
+}
+
+.baselineCard .cardEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #a3e635;
+}
+
+.baselineCard h2 {
+  margin-top: 5px;
+  color: #f8fbff;
+  font-size: 20px;
+}
+
+.baselineCard p:not(.cardEyebrow) {
+  max-width: 68ch;
+  margin-top: 7px;
+  color: #abc2d9;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.baselineAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(163, 230, 53, 0.42);
+  border-radius: 7px;
+  color: #ecfccb;
+  background: rgba(132, 204, 22, 0.14);
+  font-weight: 780;
 }
 
 .dataCard {
@@ -500,6 +545,7 @@
 }
 
 @media (max-width: 680px) {
+  .baselineCard,
   .dataCard {
     grid-template-columns: 1fr;
   }

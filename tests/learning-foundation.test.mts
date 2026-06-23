@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { INTRODUCING_YOURSELF_LESSON } from "../lib/learning/courses.ts";
+import {
+  BASELINE_PROMPTS,
+  countBaselineWords,
+  createSpeakingBaseline,
+} from "../lib/learning/baseline.ts";
 import { calculateWeeklyProgress, getLocalWeekBounds } from "../lib/learning/progress.ts";
 import {
   advanceVocabularyReview,
@@ -193,4 +198,39 @@ test("vocabulary review deduplicates expressions and follows day 1, 3, 7, and 14
   assert.equal(completed.completedAt, "2026-07-06T09:00:00.000Z");
   assert.deepEqual(getDueVocabularyReviewItems([dayOne], new Date("2026-06-24T09:00:00.000Z")), []);
   assert.deepEqual(getDueVocabularyReviewItems([dayOne], new Date("2026-06-25T09:00:00.000Z")), [dayOne]);
+});
+
+test("speaking baseline creates a non-scoring profile and lesson recommendation", () => {
+  const responses = [
+    "I am Tracy and I work in design. I enjoy hiking because it helps me relax.",
+    "First I have breakfast, then I start work. In the evening I meet my family.",
+    "Recently I visited a new place. Next we tried a local restaurant and talked for a long time.",
+    "I want to speak English at work because I need to explain my ideas clearly.",
+  ];
+  const baseline = createSpeakingBaseline({
+    responses,
+    startedAt: START,
+    recommendedLessonId: INTRODUCING_YOURSELF_LESSON.id,
+    now: new Date("2026-06-22T09:04:00.000Z"),
+  });
+
+  assert.equal(BASELINE_PROMPTS.length, 4);
+  assert.equal(countBaselineWords("It's a clear, practical answer."), 5);
+  assert.equal(baseline.durationMs, 4 * 60_000);
+  assert.equal(baseline.responseCount, 4);
+  assert.equal(baseline.recommendedLessonId, INTRODUCING_YOURSELF_LESSON.id);
+  assert.equal("rating" in baseline, false);
+  assert.equal("transcript" in baseline, false);
+});
+
+test("speaking baseline requires every prompt", () => {
+  assert.throws(
+    () => createSpeakingBaseline({
+      responses: ["Only one response"],
+      startedAt: START,
+      recommendedLessonId: INTRODUCING_YOURSELF_LESSON.id,
+      now: START,
+    }),
+    /Complete all 4 baseline prompts/,
+  );
 });

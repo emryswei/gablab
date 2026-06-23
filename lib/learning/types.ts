@@ -89,6 +89,17 @@ export type VocabularyReviewItem = {
   completedAt?: string;
 };
 
+export type SpeakingBaseline = {
+  version: "speaking-baseline-v1";
+  completedAt: string;
+  durationMs: number;
+  responseCount: number;
+  totalWordCount: number;
+  averageWordsPerResponse: number;
+  focusAreas: string[];
+  recommendedLessonId: string;
+};
+
 export type PracticeSession = {
   schemaVersion: typeof LEARNING_SCHEMA_VERSION;
   id: string;
@@ -124,6 +135,7 @@ export type LearnerProfile = {
   id: "local-profile";
   learnerName?: string;
   englishGoal?: string;
+  speakingBaseline?: SpeakingBaseline;
   updatedAt: string;
 };
 

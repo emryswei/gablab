@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowRight, Clock3, Download, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowRight, Clock3, Download, Gauge, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { INTRODUCING_YOURSELF_LESSON } from "@/lib/learning/courses";
+import { getLessonById, INTRODUCING_YOURSELF_LESSON } from "@/lib/learning/courses";
 import { calculateWeeklyProgress } from "@/lib/learning/progress";
 import {
   clearLearningSettings,
@@ -12,7 +12,7 @@ import {
   IndexedDbLearningRepository,
   loadLearningSettings,
 } from "@/lib/learning/storage";
-import type { WeeklyProgress } from "@/lib/learning/types";
+import type { SpeakingBaseline, WeeklyProgress } from "@/lib/learning/types";
 import styles from "./page.module.css";
 
 const EMPTY_PROGRESS: WeeklyProgress = {
@@ -28,16 +28,21 @@ export default function LearningDashboard() {
   const [progress, setProgress] = useState<WeeklyProgress>(EMPTY_PROGRESS);
   const [storageAvailable, setStorageAvailable] = useState(true);
   const [resumableSessionId, setResumableSessionId] = useState<string | null>(null);
+  const [speakingBaseline, setSpeakingBaseline] = useState<SpeakingBaseline | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [dataNotice, setDataNotice] = useState<string | null>(null);
   const [repository] = useState(() => new IndexedDbLearningRepository());
 
   useEffect(() => {
-    repository
-      .purgeExpiredTranscripts(getTranscriptRetentionCutoff())
-      .then(() => repository.listSessions())
-      .then((sessions) => {
+    Promise.all([
+      repository
+        .purgeExpiredTranscripts(getTranscriptRetentionCutoff())
+        .then(() => repository.listSessions()),
+      repository.getProfile(),
+    ])
+      .then(([sessions, profile]) => {
         setProgress(calculateWeeklyProgress(sessions));
+        setSpeakingBaseline(profile?.speakingBaseline ?? null);
         const resumableSession = sessions.find(
           (session) =>
             session.lessonId === INTRODUCING_YOURSELF_LESSON.id &&
@@ -52,13 +57,18 @@ export default function LearningDashboard() {
 
   const exportLearningData = async () => {
     try {
+      const [profile, sessions, reviewItems] = await Promise.all([
+        repository.getProfile(),
+        repository.listSessions(),
+        repository.listVocabularyReviewItems(),
+      ]);
       const payload = {
         schemaVersion: 1,
         exportedAt: new Date().toISOString(),
         settings: loadLearningSettings(),
-        profile: await repository.getProfile(),
-        sessions: await repository.listSessions(),
-        reviewItems: await repository.listVocabularyReviewItems(),
+        profile,
+        sessions,
+        reviewItems,
       };
       const url = URL.createObjectURL(
         new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
@@ -86,6 +96,7 @@ export default function LearningDashboard() {
       clearLearningSettings();
       setProgress(calculateWeeklyProgress([]));
       setResumableSessionId(null);
+      setSpeakingBaseline(null);
       setDeleteConfirmation(false);
       setDataNotice("All local learning data deleted.");
     } catch {
@@ -93,11 +104,33 @@ export default function LearningDashboard() {
     }
   };
 
-  const lesson = INTRODUCING_YOURSELF_LESSON;
+  const lesson = speakingBaseline
+    ? getLessonById(speakingBaseline.recommendedLessonId) ?? INTRODUCING_YOURSELF_LESSON
+    : INTRODUCING_YOURSELF_LESSON;
   const progressPercent = Math.min(100, (progress.completedStandardLessons / progress.standardGoal) * 100);
 
   return (
     <section className={styles.dashboard} aria-labelledby="weekly-progress-title">
+      <article className={styles.baselineCard}>
+        <div>
+          <p className={styles.cardEyebrow}>
+            <Gauge size={15} aria-hidden="true" /> Starting profile
+          </p>
+          <h2>{speakingBaseline ? "Baseline complete" : "Find your starting point"}</h2>
+          {speakingBaseline ? (
+            <p>
+              {speakingBaseline.responseCount} prompts · {speakingBaseline.averageWordsPerResponse} average words
+              per response. Focus: {speakingBaseline.focusAreas[0]}
+            </p>
+          ) : (
+            <p>Answer four short speaking prompts. It takes about 3-5 minutes and does not give you a score.</p>
+          )}
+        </div>
+        <Link href="/baseline" className={styles.baselineAction}>
+          {speakingBaseline ? "Retake baseline" : "Start baseline"} <ArrowRight size={17} aria-hidden="true" />
+        </Link>
+      </article>
+
       <div className={styles.progressCard}>
         <div>
           <p className={styles.cardEyebrow}>This week</p>
@@ -134,7 +167,7 @@ export default function LearningDashboard() {
       <article className={styles.lessonCard}>
         <div className={styles.lessonHeader}>
           <span>Week {lesson.week} · Lesson {lesson.sequence}</span>
-          <span>{lesson.level}</span>
+          <span>{speakingBaseline ? "Recommended from baseline" : lesson.level}</span>
         </div>
         <h2>{lesson.title}</h2>
         <p>{lesson.summary}</p>
