@@ -34,10 +34,10 @@
 
 - [ ] Add the 3-5 minute speaking baseline.
 - [ ] Add transient audio timing and pause metrics.
-- [ ] Add four-dimension reports with evidence.
-- [ ] Add 30-day transcript cleanup.
-- [ ] Connect 3-5 selected lesson expressions to vocabulary review.
-- [ ] Add day 1, 3, 7, and 14 review scheduling.
+- [x] Add four-dimension reports with evidence.
+- [x] Add 30-day transcript cleanup for completed sessions.
+- [x] Connect 3-5 selected lesson expressions to vocabulary review.
+- [x] Add day 1, 3, 7, and 14 review scheduling.
 
 ## Phase 4: Curriculum Expansion
 

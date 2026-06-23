@@ -4,6 +4,12 @@ import assert from "node:assert/strict";
 import { INTRODUCING_YOURSELF_LESSON } from "../lib/learning/courses.ts";
 import { calculateWeeklyProgress, getLocalWeekBounds } from "../lib/learning/progress.ts";
 import {
+  advanceVocabularyReview,
+  createNewVocabularyReviewItems,
+  createVocabularyReviewItem,
+  getDueVocabularyReviewItems,
+} from "../lib/learning/review.ts";
+import {
   appendSessionTurn,
   createPracticeSession,
   endPracticeSession,
@@ -14,9 +20,11 @@ import {
 import {
   DEFAULT_LEARNING_SETTINGS,
   clearLearningSettings,
+  getTranscriptRetentionCutoff,
   hasCurrentPrivacyConsent,
   loadLearningSettings,
   saveLearningSettings,
+  shouldPurgeTranscript,
 } from "../lib/learning/storage.ts";
 import type { PracticeSession } from "../lib/learning/types.ts";
 
@@ -133,4 +141,56 @@ test("learning settings use defaults for invalid data and round-trip valid data"
 
   clearLearningSettings({ removeItem: (key: string) => values.delete(key) });
   assert.equal(values.size, 0);
+});
+
+test("transcript retention removes only completed sessions older than 30 days", () => {
+  const now = new Date("2026-06-22T12:00:00.000Z");
+  const cutoff = getTranscriptRetentionCutoff(now);
+  const oldTimestamp = new Date("2026-05-01T12:00:00.000Z").toISOString();
+  const completed = {
+    ...createSession(),
+    status: "completed",
+    completedAt: oldTimestamp,
+    updatedAt: oldTimestamp,
+    turns: [{ id: "turn", role: "user", content: "Old transcript", createdAt: oldTimestamp }],
+  } as PracticeSession;
+
+  assert.equal(cutoff.toISOString(), "2026-05-23T12:00:00.000Z");
+  assert.equal(shouldPurgeTranscript(completed, cutoff), true);
+  assert.equal(shouldPurgeTranscript({ ...completed, status: "incomplete" }, cutoff), false);
+  assert.equal(shouldPurgeTranscript({ ...completed, transcriptPurgedAt: now.toISOString() }, cutoff), false);
+  assert.equal(shouldPurgeTranscript({ ...completed, turns: [] }, cutoff), false);
+});
+
+test("vocabulary review deduplicates expressions and follows day 1, 3, 7, and 14 intervals", () => {
+  const item = createVocabularyReviewItem({
+    expression: "  Most of   the time  ",
+    lessonId: INTRODUCING_YOURSELF_LESSON.id,
+    sessionId: "session-1",
+    now: START,
+  });
+  assert.equal(item.expression, "Most of the time");
+  assert.equal(item.dueAt, "2026-06-23T09:00:00.000Z");
+  assert.deepEqual(
+    createNewVocabularyReviewItems({
+      expressions: ["most OF THE time", "Once a week"],
+      existingItems: [item],
+      lessonId: INTRODUCING_YOURSELF_LESSON.id,
+      sessionId: "session-2",
+      now: START,
+    }).map((reviewItem) => reviewItem.expression),
+    ["Once a week"],
+  );
+
+  const dayOne = advanceVocabularyReview(item, new Date("2026-06-23T09:00:00.000Z"));
+  const dayThree = advanceVocabularyReview(dayOne, new Date("2026-06-25T09:00:00.000Z"));
+  const daySeven = advanceVocabularyReview(dayThree, new Date("2026-06-29T09:00:00.000Z"));
+  const completed = advanceVocabularyReview(daySeven, new Date("2026-07-06T09:00:00.000Z"));
+
+  assert.equal(dayOne.dueAt, "2026-06-25T09:00:00.000Z");
+  assert.equal(dayThree.dueAt, "2026-06-29T09:00:00.000Z");
+  assert.equal(daySeven.dueAt, "2026-07-06T09:00:00.000Z");
+  assert.equal(completed.completedAt, "2026-07-06T09:00:00.000Z");
+  assert.deepEqual(getDueVocabularyReviewItems([dayOne], new Date("2026-06-24T09:00:00.000Z")), []);
+  assert.deepEqual(getDueVocabularyReviewItems([dayOne], new Date("2026-06-25T09:00:00.000Z")), [dayOne]);
 });

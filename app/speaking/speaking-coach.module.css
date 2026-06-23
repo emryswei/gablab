@@ -503,6 +503,39 @@
   color: #f9a8d4;
 }
 
+.reviewExpressions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 14px;
+  border: 1px solid rgba(163, 230, 53, 0.24);
+  border-radius: 7px;
+  background: rgba(132, 204, 22, 0.07);
+}
+
+.reviewExpressions strong {
+  color: #d9f99d;
+}
+
+.reviewExpressions p {
+  margin-top: 4px;
+  color: #c4d5e8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.reviewExpressions a {
+  flex: 0 0 auto;
+  color: #a3e635;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.reviewExpressions a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 780px) {
   .speakingLayout {
     grid-template-columns: 1fr;
@@ -532,6 +565,11 @@
   .reportHeader,
   .reportColumns {
     grid-template-columns: 1fr;
+  }
+
+  .reviewExpressions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .reportHeader > small {

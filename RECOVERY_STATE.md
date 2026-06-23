@@ -1,7 +1,7 @@
 # Recovery State
 
 ## Current Objective
-- Improve the speaking coach intelligence using a free large language model, without changing the current STT/TTS priorities.
+- Complete the local-first English learning MVP progression and review loop.
 
 ## Completed Work
 - Refreshed the UI with a dark technology-oriented visual style across home, speaking, and vocabulary pages.
@@ -12,12 +12,16 @@
 - Added Cantonese browser voice selection for `Danny` and `Tracy`.
 - Added focused tests for browser voice selection, Cantonese coach prompts, and WAV decoding.
 - Pushed commit `d0747d2` (`Add Cantonese speaking mode with SenseVoice and refreshed UI`) to `origin/master`.
+- Upgraded the default Cloudflare coach model to `@cf/qwen/qwen3-30b-a3b-fp8`.
+- Added structured coach responses with correction and feedback UI.
+- Added lesson sessions, privacy consent, reports, dashboard progress, and completed-transcript cleanup.
+- Added deduplicated day 1, 3, 7, and 14 expression review at `/vocabulary/review`.
 
 ## Pending Work
-- Upgrade the coach LLM from `@cf/meta/llama-3.1-8b-instruct` to a stronger free-tier candidate, preferably Cloudflare `@cf/qwen/qwen3-30b-a3b-fp8`.
-- Redesign coach output contract to support natural reply plus optional correction and feedback.
-- Add UI rendering for correction/feedback after the backend contract is implemented.
-- Add English and Cantonese evaluation samples for model comparison.
+- Add the 3-5 minute speaking baseline.
+- Add transient audio timing and pause metrics without storing raw audio.
+- Add the controlled transcript browser fixture and desktop end-to-end coverage.
+- Review 20 live English and Cantonese model evaluation cases.
 
 ## Architecture Decisions
 - English STT remains browser `SpeechRecognition`.
@@ -36,13 +40,17 @@
 - `lib/speaking/coach/providers.ts`
 - `lib/speaking/coach/messages.ts`
 - `lib/speaking/coach/service.ts`
+- `lib/learning/review.ts`
+- `lib/learning/storage.ts`
+- `app/vocabulary/review-queue.tsx`
+- `app/vocabulary/review/page.tsx`
 - `scripts/setup-sensevoice.mjs`
 - `.env.local`
 
 ## Unresolved Bugs
 - Console/test output has existing Node `MODULE_TYPELESS_PACKAGE_JSON` warnings.
 - Browser Cantonese TTS naturalness depends on installed `zh-HK` system voices.
-- The latest coach intelligence upgrade has not been implemented or tested.
+- The real microphone workflow still needs a desktop smoke test.
 
 ## Rejected Approaches And Reasons
 - Browser `SpeechRecognition` for Cantonese: produced unreliable transcription such as `你好` becoming `雷猴`.
@@ -51,4 +59,4 @@
 - Focusing on premium voice quality now: user deferred TTS/intonation improvements in favor of smarter coaching.
 
 ## Exact Next Step
-- Change the configured Cloudflare coach model to `@cf/qwen/qwen3-30b-a3b-fp8`, then implement and test a structured coach response contract containing `reply`, `corrected`, `feedback`, and `followUpQuestion`.
+- Add a 3-5 minute speaking baseline that produces a non-scoring starting profile and feeds the first lesson recommendation.

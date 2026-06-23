@@ -731,6 +731,18 @@ export default function SpeakingCoach() {
       const sessionWithReport = { ...session, report: payload };
       checkpointLearningSession(sessionWithReport);
       setPracticeReport(payload);
+      const repository = learningRepositoryRef.current;
+      if (session.status === "completed" && payload.selectedExpressions.length > 0 && repository) {
+        try {
+          await repository.enqueueVocabularyReviewExpressions({
+            expressions: payload.selectedExpressions,
+            lessonId: session.lessonId,
+            sessionId: session.id,
+          });
+        } catch {
+          setStorageAvailable(false);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to generate lesson report.");
     } finally {
@@ -1057,6 +1069,15 @@ export default function SpeakingCoach() {
             </div>
           </div>
           <div className={styles.nextGoal}><strong>Next goal:</strong> {practiceReport.nextGoal}</div>
+          {practiceReport.selectedExpressions.length > 0 ? (
+            <div className={styles.reviewExpressions}>
+              <div>
+                <strong>Added to vocabulary review</strong>
+                <p>{practiceReport.selectedExpressions.join(" · ")}</p>
+              </div>
+              <Link href="/vocabulary/review">Open review</Link>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </section>

@@ -6,6 +6,7 @@ export type PracticeMode = "standard" | "quick";
 export type SessionStatus = "in_progress" | "paused" | "incomplete" | "completed";
 export type SkillDimension = "fluency" | "accuracy" | "vocabulary" | "responsiveness";
 export type CoachingSeverity = "blocking" | "recurring" | "minor";
+export type VocabularyReviewStage = 0 | 1 | 2 | 3;
 
 export type LessonCheckpoint = {
   id: string;
@@ -71,6 +72,21 @@ export type PracticeReport = {
   priorityErrors: SessionObservation[];
   nextGoal: string;
   selectedExpressions: string[];
+};
+
+export type VocabularyReviewItem = {
+  schemaVersion: typeof LEARNING_SCHEMA_VERSION;
+  id: string;
+  expression: string;
+  expressionKey: string;
+  sourceLessonId: string;
+  sourceSessionId: string;
+  stage: VocabularyReviewStage;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  dueAt?: string;
+  completedAt?: string;
 };
 
 export type PracticeSession = {

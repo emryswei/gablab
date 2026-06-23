@@ -45,6 +45,92 @@
   letter-spacing: 0;
 }
 
+.reviewSection {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(163, 230, 53, 0.24);
+  border-radius: 8px;
+  background: rgba(8, 13, 26, 0.78);
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.reviewHeader p,
+.reviewCard > span {
+  color: #a3e635;
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.reviewHeader h2 {
+  margin-top: 3px;
+  color: #f8fbff;
+  font-size: 23px;
+}
+
+.reviewHeader > span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #07120b;
+  background: #a3e635;
+  font-size: 12px;
+  font-weight: 840;
+}
+
+.reviewCard {
+  display: grid;
+  gap: 9px;
+  padding: 18px;
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.reviewCard strong {
+  color: #ecfccb;
+  font-size: clamp(24px, 4vw, 34px);
+  line-height: 1.2;
+}
+
+.reviewCard p,
+.reviewMessage {
+  color: #b6c7d8;
+  line-height: 1.5;
+}
+
+.reviewCard button {
+  justify-self: start;
+  margin-top: 3px;
+  padding: 10px 15px;
+  border: 1px solid rgba(163, 230, 53, 0.42);
+  border-radius: 7px;
+  color: #ecfccb;
+  background: rgba(132, 204, 22, 0.14);
+  font: inherit;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.reviewCard button:hover:not(:disabled) {
+  background: rgba(132, 204, 22, 0.22);
+}
+
+.reviewCard button:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
+.reviewError {
+  color: #fecdd3;
+}
+
 .deckShell,
 .errorPanel,
 .emptyPanel {

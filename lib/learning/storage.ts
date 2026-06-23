@@ -1,11 +1,19 @@
-import type { LearnerProfile, LearningSettings, PracticeSession } from "./types.ts";
+import { advanceVocabularyReview, createNewVocabularyReviewItems } from "./review.ts";
+import type {
+  LearnerProfile,
+  LearningSettings,
+  PracticeSession,
+  VocabularyReviewItem,
+} from "./types.ts";
 import { LEARNING_SCHEMA_VERSION, PRIVACY_CONSENT_VERSION } from "./types.ts";
 
 const SETTINGS_KEY = "gablab.learning.settings.v1";
 const DATABASE_NAME = "gablab-learning";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 const SESSION_STORE = "sessions";
 const PROFILE_STORE = "profiles";
+const REVIEW_STORE = "reviewItems";
+export const TRANSCRIPT_RETENTION_DAYS = 30;
 
 export const DEFAULT_LEARNING_SETTINGS: LearningSettings = {
   schemaVersion: LEARNING_SCHEMA_VERSION,
@@ -46,6 +54,20 @@ export function hasCurrentPrivacyConsent(settings: LearningSettings) {
   );
 }
 
+export function getTranscriptRetentionCutoff(now = new Date()) {
+  return new Date(now.getTime() - TRANSCRIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+}
+
+export function shouldPurgeTranscript(session: PracticeSession, cutoff: Date) {
+  const referenceTime = session.completedAt ?? session.updatedAt;
+  return (
+    session.status === "completed" &&
+    session.turns.length > 0 &&
+    !session.transcriptPurgedAt &&
+    new Date(referenceTime).getTime() < cutoff.getTime()
+  );
+}
+
 function requestResult<T>(request: IDBRequest<T>) {
   return new Promise<T>((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -72,6 +94,10 @@ export function openLearningDatabase(indexedDb: IDBFactory = indexedDB) {
       }
       if (!request.result.objectStoreNames.contains(PROFILE_STORE)) {
         request.result.createObjectStore(PROFILE_STORE, { keyPath: "id" });
+      }
+      if (!request.result.objectStoreNames.contains(REVIEW_STORE)) {
+        const store = request.result.createObjectStore(REVIEW_STORE, { keyPath: "id" });
+        store.createIndex("dueAt", "dueAt");
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -143,11 +169,74 @@ export class IndexedDbLearningRepository {
     }
   }
 
+  async saveVocabularyReviewItems(items: VocabularyReviewItem[]) {
+    if (items.length === 0) return;
+    const database = await this.openDatabase();
+    try {
+      const transaction = database.transaction(REVIEW_STORE, "readwrite");
+      const store = transaction.objectStore(REVIEW_STORE);
+      for (const item of items) store.put(item);
+      await transactionDone(transaction);
+    } finally {
+      database.close();
+    }
+  }
+
+  async listVocabularyReviewItems() {
+    const database = await this.openDatabase();
+    try {
+      const transaction = database.transaction(REVIEW_STORE, "readonly");
+      const items = await requestResult<VocabularyReviewItem[]>(
+        transaction.objectStore(REVIEW_STORE).getAll(),
+      );
+      return items.toSorted((left, right) => (left.dueAt ?? "9999").localeCompare(right.dueAt ?? "9999"));
+    } finally {
+      database.close();
+    }
+  }
+
+  async enqueueVocabularyReviewExpressions({
+    expressions,
+    lessonId,
+    sessionId,
+    now = new Date(),
+  }: {
+    expressions: string[];
+    lessonId: string;
+    sessionId: string;
+    now?: Date;
+  }) {
+    const existingItems = await this.listVocabularyReviewItems();
+    const newItems = createNewVocabularyReviewItems({
+      expressions,
+      existingItems,
+      lessonId,
+      sessionId,
+      now,
+    });
+    await this.saveVocabularyReviewItems(newItems);
+    return newItems;
+  }
+
+  async advanceVocabularyReviewItem(itemId: string, now = new Date()) {
+    const database = await this.openDatabase();
+    try {
+      const transaction = database.transaction(REVIEW_STORE, "readonly");
+      const item = await requestResult<VocabularyReviewItem | undefined>(
+        transaction.objectStore(REVIEW_STORE).get(itemId),
+      );
+      if (!item) return undefined;
+      const advanced = advanceVocabularyReview(item, now);
+      await this.saveVocabularyReviewItems([advanced]);
+      return advanced;
+    } finally {
+      database.close();
+    }
+  }
+
   async purgeExpiredTranscripts(cutoff: Date, now = new Date()) {
     const sessions = await this.listSessions();
-    const expired = sessions.filter(
-      (session) => !session.transcriptPurgedAt && new Date(session.updatedAt).getTime() < cutoff.getTime(),
-    );
+    const expired = sessions.filter((session) => shouldPurgeTranscript(session, cutoff));
 
     for (const session of expired) {
       await this.saveSession({
@@ -163,9 +252,10 @@ export class IndexedDbLearningRepository {
   async clearAllLearningData() {
     const database = await this.openDatabase();
     try {
-      const transaction = database.transaction([SESSION_STORE, PROFILE_STORE], "readwrite");
+      const transaction = database.transaction([SESSION_STORE, PROFILE_STORE, REVIEW_STORE], "readwrite");
       transaction.objectStore(SESSION_STORE).clear();
       transaction.objectStore(PROFILE_STORE).clear();
+      transaction.objectStore(REVIEW_STORE).clear();
       await transactionDone(transaction);
     } finally {
       database.close();

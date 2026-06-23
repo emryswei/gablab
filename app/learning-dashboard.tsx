@@ -8,6 +8,7 @@ import { INTRODUCING_YOURSELF_LESSON } from "@/lib/learning/courses";
 import { calculateWeeklyProgress } from "@/lib/learning/progress";
 import {
   clearLearningSettings,
+  getTranscriptRetentionCutoff,
   IndexedDbLearningRepository,
   loadLearningSettings,
 } from "@/lib/learning/storage";
@@ -33,7 +34,8 @@ export default function LearningDashboard() {
 
   useEffect(() => {
     repository
-      .listSessions()
+      .purgeExpiredTranscripts(getTranscriptRetentionCutoff())
+      .then(() => repository.listSessions())
       .then((sessions) => {
         setProgress(calculateWeeklyProgress(sessions));
         const resumableSession = sessions.find(
@@ -56,6 +58,7 @@ export default function LearningDashboard() {
         settings: loadLearningSettings(),
         profile: await repository.getProfile(),
         sessions: await repository.listSessions(),
+        reviewItems: await repository.listVocabularyReviewItems(),
       };
       const url = URL.createObjectURL(
         new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
