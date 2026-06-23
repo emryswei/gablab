@@ -31,6 +31,60 @@ test("report session validation rejects malformed and oversized input", () => {
   assert.equal(isReportSession(session), true);
   assert.equal(isReportSession({ ...session, activeDurationMs: -1 }), false);
   assert.equal(isReportSession({ ...session, turns: Array.from({ length: 101 }, () => session.turns[0]) }), false);
+  assert.equal(isReportSession({
+    ...session,
+    turns: [{ ...session.turns[0], speechMetrics: { responseDurationMs: -1 } }],
+  }), false);
+});
+
+test("lesson report sends derived timing as fluency evidence without audio", async () => {
+  const session = completedSession();
+  const timedSession = {
+    ...session,
+    turns: session.turns.map((turn, index) => index === 0 ? {
+      ...turn,
+      speechMetrics: {
+        responseDurationMs: 5_000,
+        speakingDurationMs: 4_000,
+        leadInDurationMs: 300,
+        pauseCount: 1,
+        totalPauseDurationMs: 1_000,
+      },
+    } : turn),
+  };
+  let providerRequest: { messages?: Array<{ content: string }> } | undefined;
+
+  await createLessonReport(
+    timedSession,
+    INTRODUCING_YOURSELF_LESSON,
+    { OPENAI_API_KEY: "test-key" },
+    async (_url, init) => {
+      providerRequest = JSON.parse(String(init?.body)) as { messages?: Array<{ content: string }> };
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify({
+          ratings: [
+            { dimension: "fluency", rating: 3, evidence: "Measured answer timing.", suggestion: "Keep a steady pace." },
+            { dimension: "accuracy", rating: 3, evidence: "Present tense was mostly consistent.", suggestion: "Check articles." },
+            { dimension: "vocabulary", rating: 3, evidence: "Routine words were relevant.", suggestion: "Add frequency phrases." },
+            { dimension: "responsiveness", rating: 3, evidence: "Answers addressed the prompts.", suggestion: "Add examples." },
+          ],
+          strengths: [],
+          priorityErrors: [],
+          nextGoal: "Use one sequencing phrase.",
+          selectedExpressions: [],
+        }) } }],
+      });
+    },
+    new Date("2026-06-22T09:21:00.000Z"),
+  );
+
+  const reportInput = JSON.parse(providerRequest?.messages?.[1]?.content ?? "{}") as {
+    session?: { speechTiming?: { measuredTurnCount: number } };
+    transcript?: Array<{ speechMetrics?: { pauseCount: number }; audio?: unknown }>;
+  };
+  assert.equal(reportInput.session?.speechTiming?.measuredTurnCount, 1);
+  assert.equal(reportInput.transcript?.[0].speechMetrics?.pauseCount, 1);
+  assert.equal(reportInput.transcript?.[0].audio, undefined);
 });
 
 test("completed lesson report requires four evidence-based ratings", async () => {
@@ -92,4 +146,3 @@ test("fallback report preserves recorded corrections as evidence", () => {
   assert.equal(report.priorityErrors[0].evidence, "I go office every day.");
   assert.equal(report.priorityErrors[0].suggestion, "地點前需要使用 to。");
 });
-

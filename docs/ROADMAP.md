@@ -33,7 +33,7 @@
 ## Phase 3: Progress And Review
 
 - [x] Add the 3-5 minute speaking baseline.
-- [ ] Add transient audio timing and pause metrics.
+- [x] Add transient audio timing and pause metrics.
 - [x] Add four-dimension reports with evidence.
 - [x] Add 30-day transcript cleanup for completed sessions.
 - [x] Connect 3-5 selected lesson expressions to vocabulary review.

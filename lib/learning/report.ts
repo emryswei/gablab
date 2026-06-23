@@ -1,6 +1,7 @@
 import { requestCloudflare, requestOpenAI } from "../speaking/coach/providers.ts";
 import type { CoachProviderEnv } from "../speaking/coach/providers.ts";
 import type { OpenAIMessage } from "../speaking/coach/types.ts";
+import { isTurnSpeechMetrics, summarizeSessionSpeechMetrics } from "./speech-metrics.ts";
 import type {
   CoachingSeverity,
   DimensionRating,
@@ -8,6 +9,7 @@ import type {
   PracticeReport,
   PracticeSession,
   SessionObservation,
+  SessionTurn,
   SkillDimension,
 } from "./types.ts";
 
@@ -116,17 +118,19 @@ export function createFallbackReport(
 
 function buildReportMessages(session: PracticeSession, lesson: LessonDefinition): OpenAIMessage[] {
   const completed = session.status === "completed";
+  const timingSummary = summarizeSessionSpeechMetrics(session.turns);
   const transcript = session.turns.slice(-60).map((turn) => ({
     role: turn.role,
     content: turn.content.slice(0, 1200),
     corrected: turn.corrected,
     feedback: turn.feedback,
+    speechMetrics: turn.role === "user" ? turn.speechMetrics : undefined,
   }));
   return [
     {
       role: "system",
       content:
-        'You are evaluating an A2-B1 English speaking lesson. Return one JSON object only with: {"ratings":[{"dimension":"fluency|accuracy|vocabulary|responsiveness","rating":1,"evidence":"specific transcript evidence","suggestion":"one practical improvement"}],"strengths":["up to two"],"priorityErrors":[{"category":"short label","evidence":"learner wording","suggestion":"Traditional Chinese or written Cantonese explanation","severity":"blocking|recurring|minor"}],"nextGoal":"one concrete goal","selectedExpressions":["up to five useful English phrases"]}. Never infer pronunciation from transcript. Every rating needs evidence. Use Traditional Chinese or written Cantonese for explanations. ' +
+        'You are evaluating an A2-B1 English speaking lesson. Return one JSON object only with: {"ratings":[{"dimension":"fluency|accuracy|vocabulary|responsiveness","rating":1,"evidence":"specific transcript evidence","suggestion":"one practical improvement"}],"strengths":["up to two"],"priorityErrors":[{"category":"short label","evidence":"learner wording","suggestion":"Traditional Chinese or written Cantonese explanation","severity":"blocking|recurring|minor"}],"nextGoal":"one concrete goal","selectedExpressions":["up to five useful English phrases"]}. Never infer pronunciation from transcript. Derived speech timing may support fluency evidence only; it is not pronunciation evidence. Every rating needs evidence. Use Traditional Chinese or written Cantonese for explanations. ' +
         (completed
           ? "The session is complete: return exactly four ratings, one for each dimension."
           : "The session is incomplete: return ratings as null and provide only a concise practice summary."),
@@ -139,11 +143,25 @@ function buildReportMessages(session: PracticeSession, lesson: LessonDefinition)
           status: session.status,
           activeDurationMs: session.activeDurationMs,
           learnerTurnCount: session.learnerTurnCount,
+          speechTiming: timingSummary,
         },
         transcript,
       }),
     },
   ];
+}
+
+function isReportTurn(turn: unknown): turn is SessionTurn {
+  if (!turn || typeof turn !== "object") return false;
+  const candidate = turn as Partial<SessionTurn>;
+  return (
+    (candidate.role === "user" || candidate.role === "assistant") &&
+    typeof candidate.content === "string" &&
+    candidate.content.length > 0 &&
+    candidate.content.length <= 4000 &&
+    (candidate.speechMetrics === undefined ||
+      (candidate.role === "user" && isTurnSpeechMetrics(candidate.speechMetrics)))
+  );
 }
 
 export function isReportSession(value: unknown): value is PracticeSession {
@@ -163,14 +181,7 @@ export function isReportSession(value: unknown): value is PracticeSession {
     (session.status === "completed" || session.status === "incomplete") &&
     Array.isArray(session.turns) &&
     session.turns.length <= 100 &&
-    session.turns.every(
-      (turn) =>
-        turn &&
-        (turn.role === "user" || turn.role === "assistant") &&
-        typeof turn.content === "string" &&
-        turn.content.length > 0 &&
-        turn.content.length <= 4000,
-    )
+    session.turns.every(isReportTurn)
   );
 }
 
@@ -205,4 +216,3 @@ export async function createLessonReport(
     selectedExpressions: normalizeTextList(parsed.selectedExpressions, 5),
   };
 }
-

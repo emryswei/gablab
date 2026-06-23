@@ -94,7 +94,7 @@ export function loadFailureModel(filePath) {
 function main() {
   const scriptPath = fileURLToPath(import.meta.url);
   const repoRoot = path.dirname(path.dirname(scriptPath));
-  const modelPath = path.join(repoRoot, ".agents", "ralph", "gablab-quality-loop", "failure-model.json");
+  const modelPath = path.join(repoRoot, ".agents", "quality", "failure-model.json");
   const result = validateFailureModel(loadFailureModel(modelPath));
 
   if (!result.ok) {

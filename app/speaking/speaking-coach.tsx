@@ -12,6 +12,13 @@ import {
 } from "@/lib/speaking/browser-voices";
 import { getLessonById } from "@/lib/learning/courses";
 import {
+  createSpeechTimingTracker,
+  finalizeSpeechTiming,
+  LEARNER_SPEECH_ENERGY_THRESHOLD,
+  recordSpeechActivity,
+  type SpeechTimingTracker,
+} from "@/lib/learning/speech-metrics";
+import {
   appendSessionTurn,
   createPracticeSession,
   endPracticeSession,
@@ -32,6 +39,7 @@ import {
   type PracticeReport,
   type PracticeSession,
   type SessionStatus,
+  type TurnSpeechMetrics,
 } from "@/lib/learning/types";
 import { Button } from "@/components/ui/button";
 import AccentSelector from "./accent-selector";
@@ -136,6 +144,14 @@ export default function SpeakingCoach() {
   const conversationSessionRef = useRef(0);
   const learningSessionRef = useRef<PracticeSession | null>(null);
   const learningRepositoryRef = useRef<IndexedDbLearningRepository | null>(null);
+  const speechTimingTrackerRef = useRef<SpeechTimingTracker | null>(null);
+  const completedSpeechMetricsRef = useRef<TurnSpeechMetrics | undefined>(undefined);
+  const onLearnerAudioLevelRef = useRef((level: number, now: number) => {
+    const tracker = speechTimingTrackerRef.current;
+    if (tracker && level >= LEARNER_SPEECH_ENERGY_THRESHOLD) {
+      recordSpeechActivity(tracker, now);
+    }
+  });
 
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
   const [isAudioCaptureSupported, setIsAudioCaptureSupported] = useState(false);
@@ -188,6 +204,7 @@ export default function SpeakingCoach() {
     aiSpeakingStartedAtRef,
     isAssistantSpeakingRef,
     isListeningRef,
+    onLearnerAudioLevelRef,
     setError,
   });
   const { captureAndTranscribe, stopCapture } = useSenseVoiceStt();
@@ -345,6 +362,8 @@ export default function SpeakingCoach() {
     turnInterimTextRef.current = "";
     hasSpokenInTurnRef.current = false;
     finalizedRef.current = false;
+    speechTimingTrackerRef.current = null;
+    completedSpeechMetricsRef.current = undefined;
     setTranscript("");
     setInterim("");
   };
@@ -359,6 +378,12 @@ export default function SpeakingCoach() {
     setIsListening(false);
   };
 
+  const completeCurrentSpeechMetrics = () => {
+    if (completedSpeechMetricsRef.current) return;
+    completedSpeechMetricsRef.current = finalizeSpeechTiming(speechTimingTrackerRef.current);
+    speechTimingTrackerRef.current = null;
+  };
+
   const checkpointLearningSession = (session: PracticeSession) => {
     learningSessionRef.current = session;
     setPracticeStatus(session.status);
@@ -367,7 +392,13 @@ export default function SpeakingCoach() {
     void repository.saveSession(session).catch(() => setStorageAvailable(false));
   };
 
-  const sendToCoach = async (utterance: string, { skipQuestion = false } = {}) => {
+  const sendToCoach = async (
+    utterance: string,
+    {
+      skipQuestion = false,
+      speechMetrics,
+    }: { skipQuestion?: boolean; speechMetrics?: TurnSpeechMetrics } = {},
+  ) => {
     if ((!utterance.trim() && !skipQuestion) || !conversationActiveRef.current) return;
     const requestSession = conversationSessionRef.current;
     const requestLanguage = selectedLanguageRef.current;
@@ -426,6 +457,7 @@ export default function SpeakingCoach() {
               createdAt: now.toISOString(),
               ...(payload.corrected ? { corrected: payload.corrected } : {}),
               ...(payload.feedback ? { feedback: payload.feedback } : {}),
+              ...(speechMetrics ? { speechMetrics } : {}),
             }, now);
         const assistantTurn = appendSessionTurn(sessionWithUserTurn, {
           id: crypto.randomUUID(),
@@ -455,6 +487,7 @@ export default function SpeakingCoach() {
   const finalizeTurn = () => {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
+    completeCurrentSpeechMetrics();
     stopRecognition();
     const userUtterance = `${turnFinalTextRef.current} ${turnInterimTextRef.current}`.trim();
     if (!userUtterance) {
@@ -473,7 +506,7 @@ export default function SpeakingCoach() {
     }
 
     setLastUserUtterance(userUtterance);
-    sendToCoach(userUtterance);
+    sendToCoach(userUtterance, { speechMetrics: completedSpeechMetricsRef.current });
   };
 
   const scheduleSilenceFinalize = () => {
@@ -494,6 +527,7 @@ export default function SpeakingCoach() {
     resetTurnBuffers();
     scheduleNoInputTimer(mode);
     const micStream = await ensureMicVisualizer();
+    speechTimingTrackerRef.current = createSpeechTimingTracker(performance.now());
 
     if (selectedLanguageRef.current === "cantonese") {
       if (!micStream) {
@@ -510,6 +544,7 @@ export default function SpeakingCoach() {
             clearNoInputTimer();
           },
           onCaptureEnd: () => {
+            completeCurrentSpeechMetrics();
             isListeningRef.current = false;
             setIsListening(false);
           },
@@ -847,7 +882,8 @@ export default function SpeakingCoach() {
           <ul>
             <li>Microphone audio is used for speech recognition and is not stored by GabLab.</li>
             <li>Your transcript and recent conversation context are sent to the configured Cloudflare AI model.</li>
-            <li>Lesson progress, reports, and transcripts are stored only in this browser.</li>
+            <li>Derived answer timing and pause counts are stored with lesson turns; raw audio is not stored.</li>
+            <li>Lesson progress, reports, transcripts, and derived metrics are stored only in this browser.</li>
             <li>You can export or delete all local learning data from the dashboard.</li>
           </ul>
           <label>

@@ -18,9 +18,10 @@
 - Added deduplicated day 1, 3, 7, and 14 expression review at `/vocabulary/review`.
 - Added a four-prompt, 3-5 minute non-scoring speaking baseline at `/baseline`.
 - Baseline profiles store derived word metrics, focus areas, and a lesson recommendation without persisting audio or response transcripts.
+- Added transient microphone activity tracking for answer duration, lead-in, speaking time, and pauses without persisting raw audio.
+- Added validated per-turn timing metrics and session timing summaries as fluency-only report evidence.
 
 ## Pending Work
-- Add transient audio timing and pause metrics without storing raw audio.
 - Add the controlled transcript browser fixture and desktop end-to-end coverage.
 - Review 20 live English and Cantonese model evaluation cases.
 
@@ -31,6 +32,7 @@
 - SenseVoice model assets are downloaded locally under `models/` and excluded from Git.
 - Language changes start a new conversation session to prevent stale responses crossing modes.
 - Speaking baseline transcripts remain in memory only; the local profile stores derived metrics and the recommended lesson ID.
+- Lesson audio energy is processed transiently; only derived timing metrics are stored with learner turns and may support fluency evidence.
 
 ## Important Files
 - `app/speaking/speaking-coach.tsx`
@@ -49,6 +51,8 @@
 - `lib/learning/baseline.ts`
 - `app/baseline/baseline-assessment.tsx`
 - `app/baseline/page.tsx`
+- `lib/learning/speech-metrics.ts`
+- `app/speaking/use-mic-visualizer.ts`
 - `scripts/setup-sensevoice.mjs`
 - `.env.local`
 
@@ -64,4 +68,4 @@
 - Focusing on premium voice quality now: user deferred TTS/intonation improvements in favor of smarter coaching.
 
 ## Exact Next Step
-- Add transient answer duration and pause metrics without storing raw audio, then include those metrics as evidence inputs for future fluency reports.
+- Add a controlled transcript fixture for the browser lesson workflow, then use it to cover turn persistence, report generation, and vocabulary-review enqueueing end to end.

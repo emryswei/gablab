@@ -8,6 +8,14 @@ export type SkillDimension = "fluency" | "accuracy" | "vocabulary" | "responsive
 export type CoachingSeverity = "blocking" | "recurring" | "minor";
 export type VocabularyReviewStage = 0 | 1 | 2 | 3;
 
+export type TurnSpeechMetrics = {
+  responseDurationMs: number;
+  speakingDurationMs: number;
+  leadInDurationMs: number;
+  pauseCount: number;
+  totalPauseDurationMs: number;
+};
+
 export type LessonCheckpoint = {
   id: string;
   title: string;
@@ -45,6 +53,7 @@ export type SessionTurn = {
   corrected?: string;
   feedback?: string;
   severity?: CoachingSeverity;
+  speechMetrics?: TurnSpeechMetrics;
 };
 
 export type SessionObservation = {

@@ -9,6 +9,12 @@ import {
 } from "../lib/learning/baseline.ts";
 import { calculateWeeklyProgress, getLocalWeekBounds } from "../lib/learning/progress.ts";
 import {
+  createSpeechTimingTracker,
+  finalizeSpeechTiming,
+  recordSpeechActivity,
+  summarizeSessionSpeechMetrics,
+} from "../lib/learning/speech-metrics.ts";
+import {
   advanceVocabularyReview,
   createNewVocabularyReviewItems,
   createVocabularyReviewItem,
@@ -233,4 +239,66 @@ test("speaking baseline requires every prompt", () => {
     }),
     /Complete all 4 baseline prompts/,
   );
+});
+
+test("speech timing excludes lead-in and records pauses between active speech", () => {
+  const tracker = createSpeechTimingTracker(100);
+  recordSpeechActivity(tracker, 1_000);
+  recordSpeechActivity(tracker, 1_100);
+  recordSpeechActivity(tracker, 1_900);
+  recordSpeechActivity(tracker, 2_000);
+
+  assert.deepEqual(finalizeSpeechTiming(tracker), {
+    responseDurationMs: 1_000,
+    speakingDurationMs: 200,
+    leadInDurationMs: 900,
+    pauseCount: 1,
+    totalPauseDurationMs: 800,
+  });
+});
+
+test("session speech metrics summarize only measured learner turns", () => {
+  const session = createSession();
+  const turns = [
+    {
+      id: "user-1",
+      role: "user" as const,
+      content: "First answer",
+      createdAt: START.toISOString(),
+      speechMetrics: {
+        responseDurationMs: 4_000,
+        speakingDurationMs: 3_000,
+        leadInDurationMs: 500,
+        pauseCount: 1,
+        totalPauseDurationMs: 1_000,
+      },
+    },
+    {
+      id: "assistant-1",
+      role: "assistant" as const,
+      content: "Next question",
+      createdAt: START.toISOString(),
+    },
+    {
+      id: "user-2",
+      role: "user" as const,
+      content: "Second answer",
+      createdAt: START.toISOString(),
+      speechMetrics: {
+        responseDurationMs: 6_000,
+        speakingDurationMs: 4_000,
+        leadInDurationMs: 300,
+        pauseCount: 2,
+        totalPauseDurationMs: 2_000,
+      },
+    },
+  ];
+
+  assert.deepEqual(summarizeSessionSpeechMetrics(turns), {
+    measuredTurnCount: 2,
+    averageResponseDurationMs: 5_000,
+    averagePauseCount: 1.5,
+    totalPauseDurationMs: 3_000,
+  });
+  assert.equal(session.turns.length, 0);
 });

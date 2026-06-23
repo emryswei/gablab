@@ -7,6 +7,7 @@ type UseMicVisualizerOptions = {
   aiSpeakingStartedAtRef: React.RefObject<number>;
   isAssistantSpeakingRef: React.RefObject<boolean>;
   isListeningRef: React.RefObject<boolean>;
+  onLearnerAudioLevelRef: React.RefObject<(level: number, now: number) => void>;
   setError: (message: string | null) => void;
 };
 
@@ -15,6 +16,7 @@ export function useMicVisualizer({
   aiSpeakingStartedAtRef,
   isAssistantSpeakingRef,
   isListeningRef,
+  onLearnerAudioLevelRef,
   setError,
 }: UseMicVisualizerOptions) {
   const visualizerCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -76,15 +78,24 @@ export function useMicVisualizer({
     const baseRadius = Math.min(width, height) * 0.27;
     const bars = 96;
     const freqData = new Uint8Array(2048);
+    const timeData = new Uint8Array(2048);
 
     const render = () => {
       const analyser = analyserRef.current;
       const listening = isListeningRef.current;
       const assistantSpeaking = isAssistantSpeakingRef.current;
       const now = performance.now();
+      let learnerAudioLevel = 0;
 
       if (analyser && listening) {
         analyser.getByteFrequencyData(freqData);
+        analyser.getByteTimeDomainData(timeData);
+        let squareSum = 0;
+        for (const sample of timeData) {
+          const normalized = (sample - 128) / 128;
+          squareSum += normalized * normalized;
+        }
+        learnerAudioLevel = Math.sqrt(squareSum / timeData.length);
       } else {
         const elapsed = Math.max(0, now - aiSpeakingStartedAtRef.current);
         const seed = aiSpeakingSeedRef.current;
@@ -142,6 +153,9 @@ export function useMicVisualizer({
         averageEnergy += (freqData[bin] ?? 0) / 255;
       }
       averageEnergy /= bars;
+      if (listening) {
+        onLearnerAudioLevelRef.current?.(learnerAudioLevel, now);
+      }
 
       const active = listening || assistantSpeaking;
       const pulse = active ? Math.min(1, Math.pow(averageEnergy, 0.72) * 1.35) : 0.1 + 0.05 * Math.sin(now * 0.002);
@@ -253,7 +267,7 @@ export function useMicVisualizer({
         window.cancelAnimationFrame(visualizerRafRef.current);
       }
     };
-  }, [aiSpeakingSeedRef, aiSpeakingStartedAtRef, isAssistantSpeakingRef, isListeningRef]);
+  }, [aiSpeakingSeedRef, aiSpeakingStartedAtRef, isAssistantSpeakingRef, isListeningRef, onLearnerAudioLevelRef]);
 
   useEffect(() => {
     return () => {
