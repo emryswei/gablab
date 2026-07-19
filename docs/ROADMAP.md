@@ -18,7 +18,7 @@
 - [x] Add pause, resume, and end controls.
 - [x] Add replay AI and skip-question controls.
 - [x] Save a session checkpoint after every completed turn.
-- [ ] Add a controlled transcript fixture for the browser workflow test.
+- [x] Add a controlled transcript fixture for the browser workflow test.
 
 ## Phase 2: First Complete Lesson
 

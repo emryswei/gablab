@@ -1,0 +1,138 @@
+.page {
+  width: min(100% - 32px, 880px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 34px 0 46px;
+  color: #e5f6ff;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topBar {
+  margin-bottom: 20px;
+}
+
+.backButton {
+  border-color: rgba(103, 232, 249, 0.28);
+  color: #dff8ff;
+  background: rgba(8, 13, 26, 0.62);
+}
+
+.pageTitle {
+  text-align: right;
+}
+
+.pageTitle p,
+.fixturePanel > span {
+  color: #a3e635;
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.pageTitle h1 {
+  color: #f8fbff;
+  font-size: clamp(32px, 6vw, 54px);
+  font-weight: 840;
+  line-height: 1;
+}
+
+.fixturePanel {
+  display: grid;
+  gap: 18px;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid rgba(163, 230, 53, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 13, 26, 0.94), rgba(15, 23, 42, 0.82)),
+    radial-gradient(circle at 82% 12%, rgba(163, 230, 53, 0.12), transparent 34%);
+  box-shadow: 0 28px 76px rgba(0, 0, 0, 0.32);
+}
+
+.fixturePanel h2 {
+  color: #f8fbff;
+  font-size: clamp(24px, 4vw, 32px);
+}
+
+.fixturePanel > p {
+  color: #b6c7d8;
+  line-height: 1.55;
+}
+
+.fixturePanel > button {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(163, 230, 53, 0.42);
+  border-radius: 7px;
+  color: #07120b;
+  background: #a3e635;
+  font: inherit;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.fixturePanel > button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.fixtureResult {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(103, 232, 249, 0.24);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.fixtureResult > strong {
+  color: #a3e635;
+  font-size: 20px;
+}
+
+.fixtureResult dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fixtureResult dl > div {
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 6px;
+}
+
+.fixtureResult dt {
+  color: #8ea6bc;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.fixtureResult dd {
+  margin-top: 4px;
+  color: #f8fbff;
+  font-weight: 780;
+}
+
+.fixtureError {
+  color: #fecdd3 !important;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .page {
+    width: min(100% - 24px, 880px);
+    padding: 24px 0 34px;
+  }
+
+  .fixtureResult dl {
+    grid-template-columns: 1fr 1fr;
+  }
+}

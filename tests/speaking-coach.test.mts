@@ -159,6 +159,137 @@ test("createCoachResponse forwards Cantonese conversation instructions", async (
   }
 });
 
+test("createCoachResponse suppresses over-correction for natural Cantonese", async () => {
+  const response = await createCoachResponse(
+    { utterance: "我放工之後有時會同屋企人散步。", language: "cantonese" },
+    { OPENAI_API_KEY: "test-key" },
+    async () =>
+      Response.json({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              reply: "唔錯呀。",
+              corrected: "我放工之後有時會同家人散步。",
+              feedback: "家人比較正式。",
+              followUpQuestion: "你哋通常去邊度行？",
+            }),
+          },
+        }],
+      }),
+  );
+
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.corrected, undefined);
+    assert.equal(response.feedback, undefined);
+    assert.equal(response.followUpQuestion, "你哋通常去邊度行？");
+  }
+});
+
+test("createCoachResponse fills clear Cantonese code-switch correction when model misses it", async () => {
+  const response = await createCoachResponse(
+    { utterance: "我今日有一個meeting，所以有少少緊張。", language: "cantonese" },
+    { OPENAI_API_KEY: "test-key" },
+    async () =>
+      Response.json({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              reply: "明白。",
+              corrected: null,
+              feedback: null,
+              followUpQuestion: "你開會要講啲咩？",
+            }),
+          },
+        }],
+      }),
+  );
+
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.corrected, "我今日有個會，所以有少少緊張。");
+    assert.match(response.feedback ?? "", /meeting/);
+  }
+});
+
+test("createCoachResponse fills clear Cantonese negative correction when model misses it", async () => {
+  const response = await createCoachResponse(
+    { utterance: "我不想太早起身。", language: "cantonese" },
+    { OPENAI_API_KEY: "test-key" },
+    async () =>
+      Response.json({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              reply: "明白。",
+              corrected: null,
+              feedback: null,
+              followUpQuestion: "你平時幾點起身？",
+            }),
+          },
+        }],
+      }),
+  );
+
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.corrected, "我唔想太早起身。");
+    assert.match(response.feedback ?? "", /唔/);
+  }
+});
+
+test("createCoachResponse rejects known bad Cantonese advice", async () => {
+  const response = await createCoachResponse(
+    { utterance: "我尋日去超市買餸。", language: "cantonese" },
+    { OPENAI_API_KEY: "test-key" },
+    async () =>
+      Response.json({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              reply: "明白。",
+              corrected: "我前日去超市買餸。",
+              feedback: "用前日會自然啲。",
+              followUpQuestion: "你買咗啲咩餸？",
+            }),
+          },
+        }],
+      }),
+  );
+
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.corrected, undefined);
+    assert.equal(response.feedback, undefined);
+  }
+});
+
+test("createCoachResponse replaces English follow-up in Cantonese mode", async () => {
+  const response = await createCoachResponse(
+    { utterance: "我今日有一個meeting，所以有少少緊張。", language: "cantonese" },
+    { OPENAI_API_KEY: "test-key" },
+    async () =>
+      Response.json({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              reply: "明白。",
+              corrected: "我今日有個會，所以有少少緊張。",
+              feedback: "meeting 可以講成會。",
+              followUpQuestion: "What will you talk about in the meeting?",
+            }),
+          },
+        }],
+      }),
+  );
+
+  assert.equal("error" in response, false);
+  if (!("error" in response)) {
+    assert.equal(response.followUpQuestion, "你可以講多少少嗎？");
+    assert.equal(/[A-Za-z]/.test(response.coachReply), false);
+  }
+});
+
 test("createCoachResponse skips to another checkpoint without returning correction feedback", async () => {
   let finalUserMessage = "";
   const response = await createCoachResponse(

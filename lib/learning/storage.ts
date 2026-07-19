@@ -135,6 +135,17 @@ export class IndexedDbLearningRepository {
     }
   }
 
+  async deleteSession(sessionId: string) {
+    const database = await this.openDatabase();
+    try {
+      const transaction = database.transaction(SESSION_STORE, "readwrite");
+      transaction.objectStore(SESSION_STORE).delete(sessionId);
+      await transactionDone(transaction);
+    } finally {
+      database.close();
+    }
+  }
+
   async listSessions() {
     const database = await this.openDatabase();
     try {
@@ -229,6 +240,25 @@ export class IndexedDbLearningRepository {
       const advanced = advanceVocabularyReview(item, now);
       await this.saveVocabularyReviewItems([advanced]);
       return advanced;
+    } finally {
+      database.close();
+    }
+  }
+
+  async deleteVocabularyReviewItemsBySourceSession(sessionId: string) {
+    const items = await this.listVocabularyReviewItems();
+    const itemIds = items
+      .filter((item) => item.sourceSessionId === sessionId)
+      .map((item) => item.id);
+    if (itemIds.length === 0) return 0;
+
+    const database = await this.openDatabase();
+    try {
+      const transaction = database.transaction(REVIEW_STORE, "readwrite");
+      const store = transaction.objectStore(REVIEW_STORE);
+      for (const itemId of itemIds) store.delete(itemId);
+      await transactionDone(transaction);
+      return itemIds.length;
     } finally {
       database.close();
     }

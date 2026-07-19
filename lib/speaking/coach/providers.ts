@@ -27,6 +27,12 @@ async function readCompletionContent(response: Response, providerName: string): 
   return { content };
 }
 
+async function retryEmptyResponse(request: () => Promise<ModelResult>): Promise<ModelResult> {
+  const first = await request();
+  if (!("error" in first) || first.error !== "Empty model response.") return first;
+  return request();
+}
+
 export async function requestOpenAI(
   messages: OpenAIMessage[],
   env: CoachProviderEnv = process.env,
@@ -38,21 +44,23 @@ export async function requestOpenAI(
   }
 
   const model = env.OPENAI_MODEL ?? "gpt-4o-mini";
-  const response = await fetchFn("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.6,
-      response_format: { type: "json_object" },
-    }),
-  });
+  return retryEmptyResponse(async () => {
+    const response = await fetchFn("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.6,
+        response_format: { type: "json_object" },
+      }),
+    });
 
-  return readCompletionContent(response, "OpenAI");
+    return readCompletionContent(response, "OpenAI");
+  });
 }
 
 export async function requestCloudflare(
@@ -71,19 +79,21 @@ export async function requestCloudflare(
 
   const model = env.CLOUDFLARE_MODEL ?? "@cf/qwen/qwen3-30b-a3b-fp8";
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`;
-  const response = await fetchFn(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiToken}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.6,
-      response_format: { type: "json_object" },
-    }),
-  });
+  return retryEmptyResponse(async () => {
+    const response = await fetchFn(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiToken}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.6,
+        response_format: { type: "json_object" },
+      }),
+    });
 
-  return readCompletionContent(response, "Cloudflare");
+    return readCompletionContent(response, "Cloudflare");
+  });
 }
